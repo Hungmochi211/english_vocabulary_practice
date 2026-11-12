@@ -40,7 +40,7 @@ def format_row(row):
 
 def main():
     print("=" * 65)
-    print("CHƯƠNG TRÌNH TRA CỨU TỪ VỰNG OXFORD 3000 (A2 & B2)")
+    print("CHƯƠNG TRÌNH TRA CỨU TỪ VỰNG OXFORD 3000 (A1, A2, B1 & B2)")
     print("=" * 65)
     
     df = load_data()

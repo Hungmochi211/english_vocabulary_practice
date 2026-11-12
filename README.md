@@ -8,13 +8,15 @@ Dự án Web App học từ vựng tiếng Anh thông minh với thuật toán S
 
 Dữ liệu từ vựng đã được trích xuất, làm sạch và lưu tại file Excel:
 - **`oxford_3000_vocabulary.xlsx`**: File Excel tổng hợp gồm các sheet:
+  - **Sheet `A1`**: 1.075 từ vựng cấp độ A1 (đã tách riêng từng loại từ).
   - **Sheet `A2`**: 995 từ vựng cấp độ A2 (đã tách riêng từng loại từ).
+  - **Sheet `B1`**: 907 từ vựng cấp độ B1 (đã tách riêng từng loại từ).
   - **Sheet `B2`**: 836 từ vựng cấp độ B2 (đã tách riêng từng loại từ).
 
 Mỗi bản ghi gồm 9 trường thông tin chuẩn hóa:
 1. `id`: Mã định danh số tăng dần.
 2. `word`: Từ vựng tiếng Anh chuẩn (dạng chữ sạch, không chứa số hay ký tự thừa).
-3. `cefr_level`: Cấp độ CEFR (`A2`, `B2`).
+3. `cefr_level`: Cấp độ CEFR (`A1`, `A2`, `B1`, `B2`).
 4. `part_of_speech`: Loại từ (`n.`, `v.`, `adj.`, `adv.`, `prep.`, `conj.`...).
 5. `phonetic`: Phiên âm quốc tế chuẩn IPA (`/.../`).
 6. `vietnamese_meaning`: Nghĩa tiếng Việt chuẩn theo ngữ cảnh loại từ.

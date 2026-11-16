@@ -1,0 +1,826 @@
+/* ==========================================================================
+   LexiTag Learning Lab - Courses Roadmap Stylesheet
+   Features:
+   - Interactive Roadmap with touch swipe & mouse drag-to-scroll
+   - SVG curved dashed path connecting Duolingo-style milestones
+   - Basic neutral text colors (không sặc sỡ)
+   - Soothing, muted icon & badge tones (màu dịu)
+   ========================================================================== */
+
+/* Main Courses Layout Wrapper */
+.courses-workspace {
+  display: flex;
+  height: calc(100vh - 64px);
+  margin-top: 64px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ==========================================================================
+   Central Learning Path Viewport (Scrollable & Swipeable)
+   ========================================================================== */
+.roadmap-viewport {
+  flex: 1;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 32px 24px 80px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  scroll-behavior: smooth;
+  cursor: grab;
+  user-select: none;
+  background-color: var(--bg-app);
+}
+
+.roadmap-viewport:active {
+  cursor: grabbing;
+}
+
+/* Custom Scrollbar for Smooth Swiping */
+.roadmap-viewport::-webkit-scrollbar {
+  width: 7px;
+}
+.roadmap-viewport::-webkit-scrollbar-track {
+  background: var(--bg-surface-subtle);
+}
+.roadmap-viewport::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: var(--radius-full);
+}
+.roadmap-viewport::-webkit-scrollbar-thumb:hover {
+  background: var(--text-subtle);
+}
+
+/* Floating Swipe Indicator Pill */
+.swipe-hint-pill {
+  position: sticky;
+  top: 12px;
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 20px;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.swipe-hint-pill .material-symbols-outlined {
+  font-size: 16px;
+  color: var(--soft-slate-fg);
+  animation: bounceVertical 1.5s infinite;
+}
+
+@keyframes bounceVertical {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+/* Course Header & Selectors */
+.roadmap-header {
+  width: 100%;
+  max-width: 580px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 36px;
+  flex-shrink: 0;
+}
+
+.selector-buttons-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.dropdown-selector-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 18px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+  box-shadow: var(--shadow-xs);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.dropdown-selector-btn:hover {
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-sm);
+}
+
+.dropdown-selector-btn .material-symbols-outlined {
+  font-size: 18px;
+  color: var(--text-subtle);
+}
+
+.lang-flag-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  display: inline-flex;
+}
+
+.sublinks-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 0.775rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.sublink-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  transition: var(--transition);
+}
+
+.sublink-item:hover {
+  color: var(--text-main);
+}
+
+.sublink-item .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.sublink-item.feedback .material-symbols-outlined {
+  color: var(--soft-amber-fg);
+}
+
+.sublink-divider {
+  width: 4px;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background-color: var(--border-color);
+}
+
+/* ==========================================================================
+   Roadmap Interactive Canvas
+   ========================================================================== */
+.roadmap-canvas {
+  position: relative;
+  width: 100%;
+  max-width: 580px;
+  padding-bottom: 60px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Background Curved Connector SVG */
+.roadmap-svg-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Part Section Header */
+.part-header {
+  position: relative;
+  z-index: 10;
+  margin: 32px 0 24px 0;
+  text-align: center;
+}
+
+.part-header-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.part-line {
+  height: 1px;
+  background-color: var(--border-color);
+  flex: 1;
+  max-width: 110px;
+}
+
+.part-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.part-badge {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.part-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+/* Roadmap Node Row */
+.roadmap-node-row {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  margin-bottom: 42px;
+  transition: transform 0.2s ease;
+}
+
+.roadmap-node-row.center {
+  justify-content: center;
+}
+
+.roadmap-node-row.offset-left {
+  justify-content: center;
+  padding-right: 90px;
+}
+
+.roadmap-node-row.offset-slight-right {
+  justify-content: center;
+  padding-left: 40px;
+}
+
+.roadmap-node-row.offset-right {
+  justify-content: center;
+  padding-left: 100px;
+}
+
+.roadmap-node-row.split-row {
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 16px;
+}
+
+/* Capsule Node */
+.node-capsule {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 22px 10px 14px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-xs);
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+}
+
+.node-capsule:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-focus);
+}
+
+.node-icon-bubble {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  border: 1px dashed var(--border-color);
+  background-color: var(--bg-surface-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--soft-slate-fg);
+}
+
+.node-icon-bubble .material-symbols-outlined {
+  font-size: 22px;
+}
+
+.node-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.node-title {
+  font-size: 0.925rem;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.3;
+}
+
+.node-subtitle {
+  font-size: 0.725rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* Active Node Highlighting */
+.node-capsule.active {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 0 0 4px #f8fafc, 0 0 0 7px #e2e8f0, 0 6px 18px rgba(15, 23, 42, 0.08);
+}
+
+.node-capsule.active .node-icon-bubble {
+  background-color: var(--brand-soft-bg);
+  border-color: var(--brand-soft-border);
+  color: var(--brand-soft-fg);
+}
+
+/* Active Node Card Tooltip Popup */
+.node-tooltip-card {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: calc(100% + 14px);
+  width: 260px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: var(--shadow-lg);
+  text-align: left;
+  z-index: 40;
+  animation: fadeInDown 0.25s ease;
+}
+
+.node-tooltip-card::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 12px;
+  height: 12px;
+  background-color: var(--bg-surface);
+  border-left: 1px solid var(--border-color);
+  border-top: 1px solid var(--border-color);
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translate(-50%, -6px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.tooltip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.tooltip-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.tooltip-percent {
+  font-size: 0.775rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.tooltip-progress-bar {
+  width: 100%;
+  height: 5px;
+  background-color: var(--border-light);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.tooltip-progress-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background-color: var(--btn-primary-bg);
+}
+
+.tooltip-desc {
+  font-size: 0.775rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin-bottom: 12px;
+}
+
+.tooltip-btn {
+  width: 100%;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  background-color: var(--btn-primary-bg);
+  color: var(--text-white);
+  font-size: 0.775rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.tooltip-btn:hover {
+  background-color: var(--btn-primary-hover);
+}
+
+/* Secondary Action Button: Sổ từ vựng */
+.side-utility-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.utility-bubble {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-full);
+  border: 2px dashed var(--border-color);
+  background-color: var(--bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--soft-slate-fg);
+  box-shadow: var(--shadow-xs);
+  transition: var(--transition);
+}
+
+.side-utility-btn:hover .utility-bubble {
+  border-color: var(--border-focus);
+  background-color: var(--bg-surface-subtle);
+  transform: scale(1.05);
+}
+
+.utility-title {
+  font-size: 0.725rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* Locked Node Style */
+.node-capsule.locked {
+  background-color: rgba(248, 250, 252, 0.75);
+  border-style: dashed;
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+.node-capsule.locked:hover {
+  transform: none;
+  box-shadow: var(--shadow-xs);
+  opacity: 0.9;
+}
+
+.node-capsule.locked .node-icon-bubble {
+  background-color: var(--border-light);
+  color: var(--text-subtle);
+  border-style: solid;
+}
+
+.node-capsule.locked .node-title {
+  color: var(--text-muted);
+}
+
+.node-badge-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-subtle);
+}
+
+/* Completed Node */
+.node-capsule.completed .node-icon-bubble {
+  background-color: var(--soft-green-bg);
+  border-color: var(--soft-green-border);
+  color: var(--soft-green-fg);
+}
+
+/* Quick Jump Floating Nav at Bottom */
+.floating-jump-nav {
+  position: sticky;
+  bottom: 24px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background-color: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-md);
+}
+
+.jump-btn {
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.jump-btn:hover {
+  background-color: var(--bg-surface-subtle);
+  color: var(--text-main);
+}
+
+.jump-btn.active {
+  background-color: var(--btn-primary-bg);
+  color: var(--text-white);
+}
+
+/* ==========================================================================
+   Right Side Companion Panel
+   ========================================================================== */
+.courses-companion-panel {
+  width: 320px;
+  background-color: var(--bg-surface);
+  border-left: 1px solid var(--border-color);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.companion-widgets-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Overview Card */
+.unit-overview-card {
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  background-color: var(--bg-surface-subtle);
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.unit-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.unit-tag {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.level-badge-small {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background-color: var(--border-color);
+  color: var(--text-title);
+}
+
+.unit-name {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.3;
+}
+
+.unit-description {
+  font-size: 0.775rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.unit-progress-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.unit-progress-bar {
+  width: 100%;
+  height: 6px;
+  background-color: var(--border-color);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.unit-progress-fill {
+  height: 100%;
+  background-color: var(--btn-primary-bg);
+  border-radius: var(--radius-full);
+}
+
+/* Daily Checklist Tasks */
+.daily-goals-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.section-label-small {
+  font-size: 0.725rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.checklist-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-checkbox-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.task-checkbox-item:hover {
+  background-color: var(--bg-surface-subtle);
+}
+
+.task-checkbox-input {
+  margin-top: 3px;
+  accent-color: var(--btn-primary-bg);
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
+.task-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.task-title {
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.task-status-text {
+  font-size: 0.725rem;
+  color: var(--text-muted);
+}
+
+/* Flashcard SRS Quick Practice */
+.flashcards-srs-card {
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  background: linear-gradient(180deg, #ffffff 0%, var(--bg-surface-subtle) 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.srs-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.srs-icon-mini {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background-color: var(--soft-slate-bg);
+  color: var(--soft-slate-fg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.srs-icon-mini .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.srs-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.srs-info-text {
+  font-size: 0.775rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.btn-srs-action {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface-subtle);
+  border: 1px solid var(--border-color);
+  color: var(--text-title);
+  font-size: 0.775rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-srs-action:hover {
+  background-color: var(--border-color);
+  color: var(--text-main);
+}
+
+/* Panel Footer */
+.panel-footer-note {
+  padding-top: 16px;
+  border-top: 1px solid var(--border-light);
+  font-size: 0.725rem;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.4;
+}
+
+.panel-footer-link {
+  font-weight: 600;
+  color: var(--text-main);
+  text-decoration: underline;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1100px) {
+  .courses-companion-panel {
+    display: none;
+  }
+}
+
+@media (max-width: 680px) {
+  .roadmap-viewport {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .roadmap-node-row.offset-left,
+  .roadmap-node-row.offset-right,
+  .roadmap-node-row.offset-slight-right {
+    padding-left: 0;
+    padding-right: 0;
+    justify-content: center;
+  }
+
+  .roadmap-node-row.split-row {
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+  }
+
+  .dropdown-selector-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+}

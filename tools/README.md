@@ -10,7 +10,7 @@ Dữ liệu từ vựng đã được trích xuất, làm sạch và lưu tại 
 - **`oxford_3000_vocabulary.xlsx`**: File Excel tổng hợp gồm các sheet:
   - **Sheet `A1`**: 1.075 từ vựng cấp độ A1 (đã tách riêng từng loại từ).
   - **Sheet `A2`**: 995 từ vựng cấp độ A2 (đã tách riêng từng loại từ).
-  - **Sheet `B1`**: 907 từ vựng cấp độ B1 (đã tách riêng từng loại từ).
+  - **Sheet `B1`**: 908 từ vựng cấp độ B1 (đã tách riêng từng loại từ).
   - **Sheet `B2`**: 836 từ vựng cấp độ B2 (đã tách riêng từng loại từ).
 
 Mỗi bản ghi gồm 9 trường thông tin chuẩn hóa:

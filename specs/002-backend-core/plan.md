@@ -42,7 +42,7 @@ Chi tiết kỹ thuật: [research.md](./research.md) · Thiết kế bảng & D
 **Project Type**: Backend RESTful Web Service (nằm hoàn toàn trong `back-end/`, kế thừa `001-vocabulary-data`).
 
 **Performance Goals**:
-- 95% thao tác mở thẻ Học nạp, sinh đề bài tập 15–20 từ, chấm điểm nộp bài và lấy danh sách ôn tập SM-2 đạt **$p95 < 200ms$** ở mức tải 100 người dùng đồng thời (`SC-006`).
+- 95% thao tác mở thẻ Học nạp, sinh đề bài tập 15–20 từ, chấm điểm nộp bài và lấy danh sách ôn tập SM-2 đạt **$p95 < 200ms$** trên cấu hình chuẩn (máy tối thiểu 4 CPU cores, 8GB RAM, SSD; PostgreSQL 16+ & Redis 7+ trong Docker; DB đã nạp $\ge 3.500$ từ từ `001`; tải 100 kết nối đồng thời, cỡ mẫu 1.000 requests) (`SC-006`).
 - Cron quét 10.000 hồ sơ lúc 20:00 hoàn tất xếp hàng BullMQ trong **$< 30$ giây** (`SC-007`).
 
 **Constraints**:

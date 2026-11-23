@@ -80,8 +80,11 @@ paths:
                 email:
                   type: string
                   format: email
+                  maxLength: 255
                 password:
                   type: string
+                  minLength: 1
+                  maxLength: 72
       responses:
         '200':
           description: Đăng nhập thành công
@@ -90,9 +93,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthSuccessResponse'
         '401':
-          description: Sai thông tin đăng nhập (không tiết lộ tài khoản tồn tại hay không)
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '429':
-          description: Vượt ngưỡng đăng nhập thất bại theo IP hoặc tài khoản
+          $ref: '#/components/responses/TooManyRequestsError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailableError'
 
   /auth/google:
     post:
@@ -116,7 +123,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthSuccessResponse'
         '401':
-          description: Token Google không hợp lệ hoặc email Google chưa xác thực (`EMAIL_NOT_VERIFIED`)
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailableError'
 
   /auth/refresh:
     post:
@@ -140,7 +151,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthSuccessResponse'
         '401':
-          description: Refresh Token hết hạn, đã thu hồi hoặc bị dùng lại (`TOKEN_REUSE_DETECTED`)
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailableError'
 
   /auth/logout:
     post:
@@ -165,6 +180,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EmptySuccessResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
 
   /auth/change-password:
     post:
@@ -196,7 +213,9 @@ paths:
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
-          description: Mật khẩu hiện tại không đúng (`INVALID_CURRENT_PASSWORD`)
+          $ref: '#/components/responses/UnauthorizedError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailableError'
 
   /users/me:
     get:
@@ -207,6 +226,8 @@ paths:
       responses:
         '200':
           description: Thông tin hồ sơ người học
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
     patch:
       summary: Cập nhật họ tên, ảnh đại diện, mục tiêu CEFR và tùy chọn email nhắc học
       tags: [Users]
@@ -225,6 +246,8 @@ paths:
                   maxLength: 100
                 avatarUrl:
                   type: string
+                  format: uri
+                  maxLength: 500
                   nullable: true
                 targetLevel:
                   type: string
@@ -234,6 +257,10 @@ paths:
       responses:
         '200':
           description: Cập nhật hồ sơ thành công
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
 
   /learning/lessons:
     get:
@@ -255,6 +282,10 @@ paths:
       responses:
         '200':
           description: Danh sách bài học kèm `isUnlocked`, `acquisitionCompleted`, `isCompleted`, `bestScore`
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
 
   /learning/lessons/{lessonId}/cards/{vocabularyId}/open:
     post:
@@ -276,10 +307,12 @@ paths:
       responses:
         '200':
           description: Trả về số thẻ đã mở, tổng số thẻ và cờ `acquisitionCompleted`
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
         '403':
-          description: Bài học đang bị khóa (`LESSON_LOCKED`)
+          $ref: '#/components/responses/ForbiddenError'
         '404':
-          description: Không tìm thấy bài học hoặc từ không thuộc bài học
+          $ref: '#/components/responses/NotFoundError'
 
   /learning/lessons/{lessonId}/practice/start:
     post:
@@ -300,8 +333,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/QuizAttemptStartResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
         '403':
-          description: Chưa hoàn thành Bước 1 (`ACQUISITION_REQUIRED`) hoặc bài đang khóa (`LESSON_LOCKED`)
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
 
   /learning/quizzes/mixed/start:
     post:
@@ -328,6 +365,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/QuizAttemptStartResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
 
   /learning/quizzes/{attemptId}/submit:
     post:
@@ -370,8 +411,14 @@ paths:
           description: Kết quả chi tiết từng câu, tổng điểm %, trạng thái mở khóa bài kế tiếp, SM-2 & Streak
         '400':
           $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
         '409':
-          description: Phiên làm bài đã được nộp trước đó (`ATTEMPT_ALREADY_SUBMITTED`)
+          $ref: '#/components/responses/ConflictError'
 
   /reviews/due:
     get:
@@ -390,6 +437,10 @@ paths:
       responses:
         '200':
           description: Trả về `totalDue` và danh sách thẻ sắp xếp theo `leitnerBox ASC, nextReviewDate ASC`
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
 
   /reviews/session/start:
     post:
@@ -412,6 +463,10 @@ paths:
       responses:
         '201':
           description: Trả về `attemptId` và câu hỏi ôn tập (nộp qua `/learning/quizzes/{attemptId}/submit`)
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
 
   /stats/overview:
     get:
@@ -422,18 +477,118 @@ paths:
       responses:
         '200':
           description: Số liệu thống kê cá nhân theo múi giờ UTC+7
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
 
   /admin/users:
     get:
-      summary: Danh sách học viên (Chỉ dành cho Admin)
+      summary: Danh sách học viên phân trang (Chỉ dành cho Admin)
       tags: [Users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Danh sách người dùng phân trang
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /admin/users/{userId}/status:
+    patch:
+      summary: Khóa hoặc mở khóa tài khoản học viên (`isActive`) (Chỉ dành cho Admin)
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [isActive]
+              properties:
+                isActive:
+                  type: boolean
+      responses:
+        '200':
+          description: Cập nhật trạng thái tài khoản thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptySuccessResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /admin/stats:
+    get:
+      summary: Thống kê tổng quan hệ thống (Chỉ dành cho Admin)
+      tags: [Stats]
       security:
         - bearerAuth: []
       responses:
         '200':
-          description: Danh sách người dùng phân trang
+          description: Tổng số học viên, hoạt động học tập hệ thống
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
         '403':
-          description: Không đủ quyền quản trị (`FORBIDDEN`)
+          $ref: '#/components/responses/ForbiddenError'
+
+  /admin/audit-logs:
+    get:
+      summary: Truy vấn nhật ký kiểm toán hệ thống (Chỉ dành cho Admin)
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Danh sách audit logs phân trang
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
 
 components:
   securitySchemes:
@@ -444,7 +599,43 @@ components:
 
   responses:
     ValidationError:
-      description: Dữ liệu đầu vào không hợp lệ
+      description: Dữ liệu đầu vào không hợp lệ (hoặc thiếu từ đã học cho kiểm tra tổng hợp)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnauthorizedError:
+      description: Chưa xác thực, token không hợp lệ/thu hồi, hoặc sai thông tin đăng nhập
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ForbiddenError:
+      description: Không có quyền truy cập, tài khoản bị khóa (`ACCOUNT_DISABLED`), hoặc chưa hoàn tất điều kiện mở khóa
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFoundError:
+      description: Tài nguyên không tồn tại
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ConflictError:
+      description: Xung đột trạng thái tài nguyên (email trùng hoặc `ATTEMPT_ALREADY_SUBMITTED`)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequestsError:
+      description: Vượt ngưỡng yêu cầu cho phép (`RATE_LIMIT_EXCEEDED`)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ServiceUnavailableError:
+      description: Dịch vụ xác thực Google hoặc Redis tạm thời không khả dụng (`SERVICE_UNAVAILABLE`)
       content:
         application/json:
           schema:

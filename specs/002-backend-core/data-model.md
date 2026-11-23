@@ -4,10 +4,12 @@
 
 Tài liệu này định nghĩa mô hình cơ sở dữ liệu PostgreSQL 16+ cho phân hệ Lõi Backend (`002-backend-core`), mở rộng nối tiếp trên các bảng nền móng (`topics`, `vocabularies`, `lessons`, `lesson_vocabularies`) của **Feature `001-vocabulary-data`**.
 
-**Quy ước thiết kế chung:**
+**Quy ước thiết kế & toàn vẹn dữ liệu chung:**
 - Mã hóa `UTF-8`, múi giờ hệ thống `TIMESTAMPTZ` (ngày lịch học/ôn tập tính theo `Asia/Ho_Chi_Minh`, `UTC+7`).
 - Khóa chính `INT GENERATED ALWAYS AS IDENTITY`.
-- Bảo vệ đồng thời cho SM-2 & Streak bằng transaction + `SELECT ... FOR UPDATE`.
+- Bảo vệ đồng thời cho SM-2 & Streak bằng transaction + `SELECT ... FOR UPDATE` (với bản ghi SM-2 lần đầu: `INSERT ... ON CONFLICT (user_id, vocabulary_id) DO NOTHING` rồi `SELECT ... FOR UPDATE` để đảm bảo tuần tự đúng 1 lần).
+- **Phụ thuộc `001-vocabulary-data` (CHK073)**: Toàn bộ migration của `002-backend-core` MUST chạy sau migration của `001`, không chỉnh sửa cấu trúc bảng của `001`, sử dụng `ON DELETE RESTRICT` với `vocabularies(id)` ở dữ liệu học/chấm điểm để tránh xóa nhầm từ đã học.
+- **Quy tắc lưu giữ & xóa dữ liệu (CHK072)**: Khóa mềm (`is_active = false`) không xóa dữ liệu học tập; các bảng tiến độ, bài làm, SM-2, Streak được giữ suốt vòng đời tài khoản; `refresh_sessions` hết hạn/thu hồi có thể dọn định kỳ sau 30 ngày; `audit_logs` dùng `ON DELETE SET NULL` và lưu tối thiểu 90 ngày (`FR-014`).
 
 ---
 
@@ -62,6 +64,8 @@ users (1) ──┬──< (n) refresh_sessions
 | `expires_at` | `TIMESTAMPTZ` | ❌ | `expires_at > created_at` | Thời điểm hết hạn (7 ngày) |
 | `created_at` | `TIMESTAMPTZ` | ❌ | `DEFAULT NOW()` | Thời điểm cấp phát |
 
+**Bất biến chuỗi phiên (CHK067):** `is_revoked = TRUE` khi và chỉ khi `revoked_at IS NOT NULL`; `replaced_by_hash <> token_hash`; khi `replaced_by_hash IS NOT NULL` (token đã xoay vòng), mọi nỗ lực dùng lại `token_hash` cũ đều kích hoạt thu hồi toàn bộ `session_family_id`.
+
 ### 2.3. `user_lesson_progress` (Tiến độ Bài học)
 
 | Cột | Kiểu | Nullable | Ràng buộc / Quy tắc | Mô tả |
@@ -77,7 +81,7 @@ users (1) ──┬──< (n) refresh_sessions
 | `first_completed_at` | `TIMESTAMPTZ` | ✔️ | `NULL` | Mốc hoàn thành $\ge 80\%$ lần đầu |
 | `updated_at` | `TIMESTAMPTZ` | ❌ | `DEFAULT NOW()` | Cập nhật cuối |
 
-**Ràng buộc:** `UNIQUE (user_id, lesson_id)`.
+**Ràng buộc:** `UNIQUE (user_id, lesson_id)`. Mọi phần tử trong `opened_vocabulary_ids` (tập không trùng lặp) MUST được xác thực thuộc bảng `lesson_vocabularies` (`001`) của đúng `lesson_id` tương ứng trước khi ghi nhận; `acquisition_completed = TRUE` chỉ bật khi tập này chứa đủ 100% `vocabulary_id` của bài học đó (`FR-004`).
 
 ### 2.4. `quiz_attempts` (Phiên / Lượt làm bài tập)
 
@@ -94,14 +98,18 @@ users (1) ──┬──< (n) refresh_sessions
 | `total_score` | `DECIMAL(6,2)` | ❌ | `DEFAULT 0.00` | Tổng điểm ($1,0$ + $0,5$ + $0,0$) |
 | `score_percentage` | `DECIMAL(5,2)` | ❌ | `0.00..100.00` | Tỷ lệ % đạt được |
 | `started_at` | `TIMESTAMPTZ` | ❌ | `DEFAULT NOW()` | Bắt đầu làm bài |
-| `submitted_at` | `TIMESTAMPTZ` | ✔️ | `NULL` | Thời điểm nộp bài |
+| `submitted_at` | `TIMESTAMPTZ` | ✔️ | `NULL` khi `in_progress`, `>= started_at` khi `submitted` | Thời điểm nộp bài |
+
+**Bất biến phiên làm bài (CHK064, CHK066):**
+- `attempt_type = 'lesson_practice'` bắt buộc `lesson_id IS NOT NULL`; `sm2_review` và `mixed_quiz` bắt buộc `lesson_id IS NULL`.
+- Khi `status = 'submitted'`, số bản ghi `quiz_attempt_answers` thuộc `attempt_id` bằng đúng `total_questions`, `total_score = SUM(score)`, và `score_percentage = ROUND((total_score / total_questions) * 100, 2)` (half-up).
 
 ### 2.5. `quiz_attempt_answers` (Chi tiết từng câu trả lời)
 
 | Cột | Kiểu | Nullable | Ràng buộc / Quy tắc | Mô tả |
 | :--- | :--- | :---: | :--- | :--- |
 | `id` | `INT` | ❌ | `PRIMARY KEY IDENTITY` | Khóa chính |
-| `attempt_id` | `INT` | ❌ | `FK -> quiz_attempts(id) ON DELETE CASCADE` | Lượt làm bài |
+| `attempt_id` | `INT` | ❌ | `FK -> quiz_attempts(id)` (kèm composite FK `(attempt_id, user_id) -> quiz_attempts(id, user_id) ON DELETE CASCADE`) | Lượt làm bài (chống lệch chủ sở hữu) |
 | `user_id` | `INT` | ❌ | `FK -> users(id) ON DELETE CASCADE` | Học viên |
 | `vocabulary_id` | `INT` | ❌ | `FK -> vocabularies(id) ON DELETE RESTRICT` | Từ vựng được hỏi |
 | `practice_mode` | `practice_mode_enum` | ❌ | `multiple_choice`, `typing`, `dictation` | Dạng bài tập (FR-006) |
@@ -155,13 +163,15 @@ users (1) ──┬──< (n) refresh_sessions
 | `words_reviewed` | `INT` | ❌ | `DEFAULT 0`, $\ge 0$ | Số lượt ôn tập SM-2 trong ngày |
 | `lesson_practices_completed` | `INT` | ❌ | `DEFAULT 0`, $\ge 0$ | Số bài tập bài học đã nộp trong ngày |
 | `sm2_sessions_completed` | `INT` | ❌ | `DEFAULT 0`, $\ge 0$ | Số phiên ôn SM-2 đạt điều kiện ngày |
-| `streak_qualified` | `BOOLEAN` | ❌ | `DEFAULT FALSE` | Đã đạt chuẩn tính Streak ngày này |
-| `reminder_sent` | `BOOLEAN` | ❌ | `DEFAULT FALSE` | Cờ compare-and-set chống gửi trùng email 20:00 |
-| `reminder_sent_at` | `TIMESTAMPTZ` | ✔️ | `NULL` | Thời điểm claim gửi email |
+| `streak_qualified` | `BOOLEAN` | ❌ | `DEFAULT FALSE` | Đã đạt chuẩn tính Streak ngày này (`lesson_practices_completed >= 1` OR `words_reviewed >= 10` OR (`sm2_sessions_completed >= 1` & hết từ đến hạn)) |
+| `reminder_sent` | `BOOLEAN` | ❌ | `DEFAULT FALSE` | Cờ compare-and-set chống gửi trùng email 20:00 (tối đa 1 lần/ngày) |
+| `reminder_status` | `VARCHAR(20)` | ✔️ | `NULL` hoặc `'queued'`, `'delivered'`, `'failed'` | Trạng thái chi tiết job nhắc nhở (CHK071) |
+| `reminder_attempts` | `SMALLINT` | ❌ | `DEFAULT 0`, $\ge 0$ | Số lần worker đã thử gửi (tối đa 3 lần retry) |
+| `reminder_sent_at` | `TIMESTAMPTZ` | ✔️ | `NULL` | Thời điểm claim / cập nhật trạng thái email |
 | `created_at` | `TIMESTAMPTZ` | ❌ | `DEFAULT NOW()` | Tạo bản ghi |
 | `updated_at` | `TIMESTAMPTZ` | ❌ | `DEFAULT NOW()` | Cập nhật cuối |
 
-**Ràng buộc:** `UNIQUE (user_id, study_date)`.
+**Ràng buộc & quy tắc cộng dồn (CHK070):** `UNIQUE (user_id, study_date)`. Các bộ đếm cộng dồn nguyên tử khi nộp bài theo ngày `UTC+7`: `lesson_practices_completed` `+1` (khi nộp `lesson_practice` đạt $\ge 80,00\%$), `words_learned` `+N` (số câu đạt `>= 0.5` điểm trong `lesson_practice`), `words_reviewed` `+N` (số câu trong `sm2_review`), `sm2_sessions_completed` `+1` (khi nộp `sm2_review`).
 
 ### 2.9. `audit_logs` (Nhật ký hệ thống)
 
@@ -240,7 +250,9 @@ CREATE TABLE refresh_sessions (
     ip_address VARCHAR(45) NULL,
     expires_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT chk_refresh_expiry CHECK (expires_at > created_at)
+    CONSTRAINT chk_refresh_expiry CHECK (expires_at > created_at),
+    CONSTRAINT chk_refresh_revoked_at CHECK ((NOT is_revoked AND revoked_at IS NULL) OR (is_revoked AND revoked_at IS NOT NULL)),
+    CONSTRAINT chk_refresh_not_self_replaced CHECK (replaced_by_hash IS NULL OR replaced_by_hash <> token_hash)
 );
 CREATE INDEX idx_refresh_user_family ON refresh_sessions (user_id, session_family_id);
 CREATE INDEX idx_refresh_expires_at ON refresh_sessions (expires_at);
@@ -276,14 +288,23 @@ CREATE TABLE quiz_attempts (
     total_score DECIMAL(6,2) NOT NULL DEFAULT 0.00 CHECK (total_score >= 0.00 AND total_score <= total_questions),
     score_percentage DECIMAL(5,2) NOT NULL DEFAULT 0.00 CHECK (score_percentage BETWEEN 0.00 AND 100.00),
     started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    submitted_at TIMESTAMPTZ NULL
+    submitted_at TIMESTAMPTZ NULL,
+    CONSTRAINT uq_quiz_attempts_id_user UNIQUE (id, user_id),
+    CONSTRAINT chk_quiz_attempt_type_lesson CHECK (
+        (attempt_type = 'lesson_practice' AND lesson_id IS NOT NULL)
+        OR (attempt_type IN ('sm2_review', 'mixed_quiz') AND lesson_id IS NULL)
+    ),
+    CONSTRAINT chk_quiz_attempt_status_time CHECK (
+        (status = 'in_progress' AND submitted_at IS NULL)
+        OR (status = 'submitted' AND submitted_at IS NOT NULL AND submitted_at >= started_at)
+    )
 );
 CREATE INDEX idx_quiz_attempts_user_lesson ON quiz_attempts (user_id, lesson_id, status);
 
 -- 5. quiz_attempt_answers
 CREATE TABLE quiz_attempt_answers (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    attempt_id INT NOT NULL REFERENCES quiz_attempts(id) ON DELETE CASCADE,
+    attempt_id INT NOT NULL,
     user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     vocabulary_id INT NOT NULL REFERENCES vocabularies(id) ON DELETE RESTRICT,
     practice_mode practice_mode_enum NOT NULL,
@@ -294,7 +315,15 @@ CREATE TABLE quiz_attempt_answers (
     soundex_matched BOOLEAN NULL,
     quality_rating SMALLINT NOT NULL CHECK (quality_rating BETWEEN 0 AND 5),
     response_time_ms INT NOT NULL CHECK (response_time_ms BETWEEN 0 AND 300000),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT fk_answer_attempt_owner FOREIGN KEY (attempt_id, user_id) REFERENCES quiz_attempts(id, user_id) ON DELETE CASCADE,
+    CONSTRAINT uq_attempt_answer_vocab UNIQUE (attempt_id, vocabulary_id),
+    CONSTRAINT chk_answer_grading_consistency CHECK (
+        (grading_status = 'exact' AND score = 1.00 AND quality_rating IN (3, 4, 5))
+        OR (grading_status = 'near_match' AND score = 0.50 AND quality_rating = 3)
+        OR (grading_status = 'phonetic_match' AND score = 0.00 AND quality_rating = 2)
+        OR (grading_status = 'incorrect' AND score = 0.00 AND quality_rating IN (0, 1))
+    )
 );
 CREATE INDEX idx_attempt_answers_user_vocab ON quiz_attempt_answers (user_id, vocabulary_id, created_at DESC);
 
@@ -332,7 +361,8 @@ CREATE TABLE user_streaks (
     current_streak INT NOT NULL DEFAULT 0 CHECK (current_streak >= 0),
     longest_streak INT NOT NULL DEFAULT 0 CHECK (longest_streak >= current_streak),
     last_study_date DATE NULL,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_streak_last_study_date CHECK (current_streak = 0 OR last_study_date IS NOT NULL)
 );
 CREATE INDEX idx_streaks_reminder_scan ON user_streaks (current_streak, last_study_date) WHERE current_streak >= 1;
 
@@ -347,6 +377,8 @@ CREATE TABLE daily_study_logs (
     sm2_sessions_completed INT NOT NULL DEFAULT 0 CHECK (sm2_sessions_completed >= 0),
     streak_qualified BOOLEAN NOT NULL DEFAULT FALSE,
     reminder_sent BOOLEAN NOT NULL DEFAULT FALSE,
+    reminder_status VARCHAR(20) NULL CHECK (reminder_status IS NULL OR reminder_status IN ('queued', 'delivered', 'failed')),
+    reminder_attempts SMALLINT NOT NULL DEFAULT 0 CHECK (reminder_attempts >= 0),
     reminder_sent_at TIMESTAMPTZ NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -367,3 +399,7 @@ CREATE TABLE audit_logs (
 );
 CREATE INDEX idx_audit_actor_created ON audit_logs (actor_user_id, created_at DESC);
 ```
+
+### Quy tắc Migration & Rollback (CHK074)
+- Mọi TypeORM migration của `002-backend-core` MUST chạy trong **1 PostgreSQL transaction** để lỗi cục bộ tự rollback toàn bộ, không để lại bảng/ràng buộc dở dang.
+- Mỗi migration MUST có hàm `down()` hoàn tác theo thứ tự ngược phụ thuộc (`audit_logs`, `daily_study_logs`, `user_streaks`, `user_sm2_reviews`, `quiz_attempt_answers`, `quiz_attempts`, `user_lesson_progress`, `refresh_sessions`, `users`, rồi đến các `ENUM` mới của `002`) và tuyệt đối không đụng các bảng/enum của `001-vocabulary-data`.

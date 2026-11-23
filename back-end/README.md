@@ -56,9 +56,9 @@ Backend đóng vai trò là "bộ não" của toàn bộ hệ sinh thái:
 
 ---
 
-## 3. 🗄️ Thiết kế Cơ sở Dữ liệu (MySQL Schema Đề xuất)
+## 3. 🗄️ Thiết kế Cơ sở Dữ liệu (PostgreSQL + pgvector Schema Đề xuất)
 
-Hệ thống sử dụng **MySQL (5.7+ / 8.0+)** với kiến trúc quan hệ ACID mạnh mẽ:
+Hệ thống sử dụng **PostgreSQL 16+ (chạy trong Docker với extension `pgvector`)** đảm bảo ACID mạnh mẽ và hỗ trợ VectorDB cho AI RAG:
 
 ```
 [users] ──┬──< [user_progress] ──> [vocabularies] <── [lessons] <── [topics]
@@ -113,6 +113,6 @@ back-end/
 │   │   ├── sm2.js/py         # Tính toán hệ số SM-2 Spaced Repetition
 │   │   └── shuffle.js/py     # Fisher-Yates & Stratified Sampling
 │   └── database/
-│       ├── migrations/       # Quản lý cấu trúc bảng MySQL
+│       ├── migrations/       # Quản lý cấu trúc bảng PostgreSQL & pgvector
 │       └── seeders/          # Nạp dữ liệu từ oxford_3000_vocabulary.xlsx
 ```

@@ -1,0 +1,369 @@
+openapi: 3.0.3
+info:
+  title: English Vocabulary Practice - Vocabulary & Lesson API
+  description: API hợp đồng cho phân hệ Quản lý Từ vựng và Bài học (Gói 001-vocabulary-data).
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local Development Server
+
+paths:
+  /topics:
+    get:
+      summary: Lấy danh sách toàn bộ chủ đề bài học
+      description: Trả về danh sách 16 chủ đề chuẩn hóa kèm tổng số bài học của từng chủ đề.
+      tags:
+        - Topics
+      responses:
+        '200':
+          description: Danh sách chủ đề thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopicsResponse'
+
+  /lessons:
+    get:
+      summary: Lấy danh sách bài học theo bộ lọc
+      description: Lọc danh sách bài học theo Cấp độ CEFR (A1, A2, B1, B2) và/hoặc Chủ đề.
+      tags:
+        - Lessons
+      parameters:
+        - name: level
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [A1, A2, B1, B2]
+          description: Cấp độ CEFR cần lọc
+        - name: topicId
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: ID của chủ đề cần lọc
+      responses:
+        '200':
+          description: Danh sách bài học
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LessonsListResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /lessons/{id}:
+    get:
+      summary: Lấy chi tiết bài học và danh sách từ vựng
+      description: Trả về thông tin bài học và danh sách 15-18 từ vựng đầy đủ ngữ cảnh để học Flashcard.
+      tags:
+        - Lessons
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID của bài học
+      responses:
+        '200':
+          description: Chi tiết bài học
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LessonDetailResponse'
+        '404':
+          $ref: '#/components/responses/LessonNotFound'
+
+  /vocabularies/{id}:
+    get:
+      summary: Lấy chi tiết 1 từ vựng
+      tags:
+        - Vocabularies
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID của từ vựng
+      responses:
+        '200':
+          description: Chi tiết từ vựng
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VocabularyResponse'
+        '404':
+          $ref: '#/components/responses/VocabularyNotFound'
+
+  /vocabularies/search:
+    get:
+      summary: Tra cứu từ vựng theo từ khóa
+      description: Tìm kiếm theo tiền tố từ tiếng Anh (Prefix Match, không phân biệt hoa thường, tự động escape ký tự wildcard % và _), sắp xếp tất định theo ORDER BY LENGTH(word) ASC, word ASC, cefr_level ASC, part_of_speech ASC. Phục vụ tra cứu từ điển nhanh và Chatbot Function Calling.
+      tags:
+        - Vocabularies
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+          description: Từ khóa tiếng Anh cần tìm (độ dài 1-100 ký tự)
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+          description: Giới hạn số lượng kết quả trả về (mặc định 20, tối đa 50)
+      responses:
+        '200':
+          description: Kết quả tìm kiếm (danh sách từ vựng khớp)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VocabulariesSearchResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+components:
+  responses:
+    LessonNotFound:
+      description: Bài học không tồn tại
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            data: null
+            error:
+              code: LESSON_NOT_FOUND
+              message: Bài học không tồn tại
+              details: null
+    VocabularyNotFound:
+      description: Từ vựng không tồn tại
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            data: null
+            error:
+              code: VOCABULARY_NOT_FOUND
+              message: Từ vựng không tồn tại
+              details: null
+    ValidationError:
+      description: Dữ liệu gửi lên không hợp lệ
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            data: null
+            error:
+              code: VALIDATION_ERROR
+              message: Dữ liệu gửi lên không hợp lệ
+              details:
+                - "level must be one of the following values: A1, A2, B1, B2"
+
+  schemas:
+    Topic:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        code:
+          type: string
+          example: daily_life
+        name:
+          type: string
+          example: Daily Life & Routines
+        nameVi:
+          type: string
+          example: Đời sống & Thói quen hàng ngày
+        description:
+          type: string
+          example: Các từ vựng về hoạt động sinh hoạt và thói quen mỗi ngày
+        totalLessons:
+          type: integer
+          example: 25
+
+    LessonSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        topicId:
+          type: integer
+          example: 1
+        topicNameVi:
+          type: string
+          example: Đời sống & Thói quen hàng ngày
+        cefrLevel:
+          type: string
+          enum: [A1, A2, B1, B2]
+          example: A1
+        title:
+          type: string
+          example: Lesson 1 - Daily Life
+        orderIndex:
+          type: integer
+          example: 1
+        wordCount:
+          type: integer
+          example: 16
+
+    Vocabulary:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        word:
+          type: string
+          example: abandon
+        cefrLevel:
+          type: string
+          enum: [A1, A2, B1, B2]
+          example: B2
+        partOfSpeech:
+          type: string
+          example: v.
+        phonetic:
+          type: string
+          example: /əˈbæn.dən/
+        vietnameseMeaning:
+          type: string
+          example: từ bỏ
+        exampleEn:
+          type: string
+          example: Many baby girls have been abandoned on the streets of Beijing.
+        exampleVi:
+          type: string
+          example: Nhiều bé gái bị bỏ rơi trên đường phố Bắc Kinh.
+        topicId:
+          type: integer
+          example: 7
+        audioUrl:
+          type: string
+          nullable: true
+          example: https://storage.example.com/audio/abandon.mp3
+        orderInLesson:
+          type: integer
+          nullable: true
+          example: 1
+
+    TopicsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Topic'
+        error:
+          type: object
+          nullable: true
+          example: null
+
+    LessonsListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/LessonSummary'
+        error:
+          type: object
+          nullable: true
+          example: null
+
+    LessonDetailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            lesson:
+              $ref: '#/components/schemas/LessonSummary'
+            vocabularies:
+              type: array
+              items:
+                $ref: '#/components/schemas/Vocabulary'
+        error:
+          type: object
+          nullable: true
+          example: null
+
+    VocabularyResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Vocabulary'
+        error:
+          type: object
+          nullable: true
+          example: null
+
+    VocabulariesSearchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Vocabulary'
+        error:
+          type: object
+          nullable: true
+          example: null
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        data:
+          nullable: true
+          example: null
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: LESSON_NOT_FOUND
+            message:
+              type: string
+              example: Bài học không tồn tại
+            details:
+              nullable: true
+              example: null
+              description: Chi tiết lỗi xác thực (mảng/đối tượng) hoặc null đối với lỗi nghiệp vụ/hệ thống
+          required:
+            - code
+            - message
+            - details

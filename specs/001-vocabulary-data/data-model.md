@@ -37,7 +37,7 @@ Bảng lưu trữ từng đơn vị từ vựng độc lập đã làm phẳng t
 | `word` | `VARCHAR(100)` | ❌ | Không rỗng, chữ sạch (FR-002) | Từ tiếng Anh (cấm dính `close2`, ngoặc đơn, `\xa0`) |
 | `cefr_level` | `cefr_level_enum` | ❌ | `ENUM('A1','A2','B1','B2')` | Cấp độ theo chuẩn CEFR (FR-001) |
 | `part_of_speech` | `VARCHAR(30)` | ❌ | Chỉ 1 trong 14 nhãn chuẩn (FR-003) | `n.`, `v.`, `adj.`, `adv.`, `article.`, `indefinite article.`... |
-| `sense_number` | `SMALLINT` | ❌ | `DEFAULT 1`, $\ge 1$ | Phân biệt đồng âm cùng `(word, cefr_level, part_of_speech)` |
+| `sense_number` | `SMALLINT` | ❌ | `DEFAULT 1`, $\ge 1$ | Phân biệt nghĩa cùng `(word, cefr_level, part_of_speech)` (vd: `rock` A2 `n.` sense 1 = đá, sense 2 = nhạc rock); đánh lại từ 1 theo thứ tự file nguồn hiện tại mỗi lần nạp |
 | `phonetic` | `VARCHAR(100)` | ❌ | Định dạng `^/.+/$` (FR-004) | Phiên âm quốc tế IPA (ví dụ `/əˈbæn.dən/`) |
 | `vietnamese_meaning` | `VARCHAR(255)` | ❌ | Không rỗng, 1–255 ký tự | Nghĩa tiếng Việt chuẩn theo từ loại |
 | `example_en` | `TEXT` | ❌ | Không rỗng | Câu ví dụ ngữ cảnh tiếng Anh |

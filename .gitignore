@@ -1,0 +1,27 @@
+# Environment variables & secrets (Constitution Principle V)
+.env
+.env.*
+!.env.example
+back-end/.env
+back-end/.env.*
+!back-end/.env.example
+font-end/.env
+font-end/.env.*
+!font-end/.env.example
+
+# Dependencies & build outputs
+node_modules/
+back-end/node_modules/
+back-end/dist/
+font-end/node_modules/
+font-end/dist/
+
+# Python virtual environment & cache
+.venv/
+__pycache__/
+*.pyc
+
+# Logs & OS files
+*.log
+.DS_Store
+Thumbs.db

@@ -14,8 +14,9 @@
 
 - **Thuộc phạm vi Feature 001**: Toàn bộ Backend Engine, bao gồm thiết kế mô hình cơ sở dữ liệu PostgreSQL, TypeORM Migrations, Seeder nạp và làm sạch dữ liệu từ Excel, thuật toán phân bổ bài học cân bằng (Balanced Partitioning), và các RESTful API công khai phục vụ truy vấn danh mục chủ đề, bài học và tra cứu từ vựng.
 - **Ngoài phạm vi Feature 001 (Nằm ở các feature sau)**:
-  - Giao diện người dùng Web (ReactJS, TailwindCSS, màn hình `/learn`, tương tác Thẻ Flashcard 3D) thuộc **Feature `003-frontend-learn`**.
+  - Giao diện người dùng Web (ReactJS, TailwindCSS, màn hình `/learn`, tương tác Thẻ Flashcard 3D) thuộc **Feature `004-frontend-webapp`**.
   - Tiến độ học tập cá nhân hóa, trạng thái khóa bài theo tài khoản, thuật toán Spaced Repetition (SM-2, Leitner) và kiểm tra đánh giá ($\ge 80\%$) thuộc **Feature `002-backend-core`**.
+  - Trợ lý ảo Chatbot AI hỏi đáp ngữ cảnh (Gemini Function Calling 3 tools) thuộc **Feature `003-ai-chatbot`**.
 
 ---
 
@@ -31,6 +32,11 @@
 - Q: Xử lý thế nào với trường hợp biên dữ liệu không thể chia hợp lệ (như nhóm 1–14 từ hoặc nhóm không có nghiệm nguyên thỏa cận 15-20)? → A: Toàn bộ 32 nhóm từ vựng của Oxford 3000 trong thực tế đều có từ 90 đến 151 từ nên 100% đều chia được thành các bài 15-18 từ. Đối với dữ liệu mở rộng trong tương lai: Nếu một nhóm không thể phân hoạch hợp lệ, hệ thống Seeder vẫn nạp từ vựng vào bảng `vocabularies` (kho dữ liệu) nhưng bỏ qua việc tạo `lessons` cho nhóm đó, ghi log cảnh báo `[SEED_WARNING: Topic X Level Y có N từ, không thể phân hoạch hợp lệ vào khoảng 15-20 từ. Từ vựng được lưu trữ trong kho nhưng chưa phân bổ vào bài học.]`.
 - Q: File âm thanh phát âm (.mp3) được lưu trữ thế nào? → A: Tuyệt đối không lưu dữ liệu nhị phân (Blob/Base64) vào PostgreSQL; chỉ lưu URL tĩnh dạng `VARCHAR(500)` trỏ đến Cloud Storage (Cloudflare R2 / AWS S3) hoặc CDN.
 - Q: Ký tự khoảng trắng không ngắt (`\xa0`) trong PDF xử lý thế nào? → A: Đã được chuẩn hóa chuyển thành dấu cách ASCII thông thường (`\x20`, mã 32) để tránh lỗi so khớp chuỗi khi người dùng gõ từ bàn phím.
+
+### Session 2026-11-23
+
+- Q: Khi một từ có nhiều nghĩa cùng cấp độ và cùng từ loại nhưng nguồn không ghi số nghĩa, hệ thống nên phân biệt các bản ghi đó thế nào? → A: Đánh `sense_number` từ 1 theo thứ tự xuất hiện trong file nguồn, riêng cho từng bộ `(word, cefr_level, part_of_speech)`; cùng một file nguồn phải cho cùng số nghĩa khi nạp lại.
+- Q: Nếu thứ tự hoặc nội dung file nguồn thay đổi, hệ thống nên giữ `sense_number` của các nghĩa đã có như thế nào? → A: Mỗi lần nạp, đánh số lại từ 1 theo thứ tự trong file nguồn hiện tại.
 
 ---
 
@@ -51,6 +57,7 @@ Quản trị viên hoặc script hệ thống chạy lệnh nạp dữ liệu (S
 3. **Given** một nhóm từ có 34 từ vựng cùng level A1 và cùng topic, **When** thuật toán chia lesson xử lý, **Then** hệ thống tạo ra 2 bài học (mỗi bài 17 từ), không có bài nào bị lẻ dưới 15 từ. (Mã: `US1-AS3`)
 4. **Given** một nhóm từ có 19 từ vựng cùng level và topic, **When** thuật toán chia lesson xử lý, **Then** hệ thống tạo ra đúng 1 bài học chứa 19 từ (chấp nhận ngưỡng dung sai $\le 20$ để tránh tạo bài lẻ). (Mã: `US1-AS4`)
 5. **Given** bản ghi từ vựng trong file Excel, **When** nạp vào database, **Then** cột `word` không chứa số chỉ mục, không chứa ngoặc đơn, không chứa ký tự `\xa0`, và `phonetic` bắt buộc định dạng `^/.+/$` không chứa ký tự `*`. (Mã: `US1-AS5`)
+6. **Given** một nhóm từ có 124 từ vựng cùng level và topic (tồn tại cả phương án 7 bài và 8 bài hợp lệ), **When** thuật toán chia lesson xử lý, **Then** hệ thống áp dụng quy tắc ưu tiên số bài ít nhất ($k = 7$) tạo 7 bài học với kích thước `[17, 17, 18, 18, 18, 18, 18]`. (Mã: `US1-AS6`)
 
 ---
 
@@ -76,7 +83,7 @@ Người học (hoặc ứng dụng phía client) gọi API lấy danh mục l�
 
 **Why this priority**: Đây là bước "Học nạp" bắt buộc trong chu trình sư phạm: tiếp thu kiến thức nền tảng trước khi chuyển sang bước "Học áp dụng" (luyện tập phản xạ).
 
-**Independent Test**: Gửi request `GET /api/v1/lessons/:id`, kiểm tra danh sách từ trả về có đúng thứ tự `order_in_lesson` từ $1 \rightarrow N$ (với $15 \le N \le 20$ theo FR-006), mỗi từ có đủ 9 trường thông tin không bị null.
+**Independent Test**: Gửi request `GET /api/v1/lessons/:id`, kiểm tra danh sách từ trả về có đúng thứ tự `order_in_lesson` từ $1 \rightarrow N$ (với $15 \le N \le 20$ theo FR-006), mỗi từ có đầy đủ các trường thông tin bắt buộc không bị null (gồm `id`, `word`, `cefrLevel`, `partOfSpeech`, `senseNumber`, `phonetic`, `vietnameseMeaning`, `exampleEn`, `exampleVi`, `topicId`; riêng `audioUrl` cho phép `null` theo Edge Case 8).
 
 **Acceptance Scenarios**:
 
@@ -125,7 +132,7 @@ Người học hoặc các phân hệ khác (như Chatbot AI Tool Use) cần tra
 
 - **FR-001**: Hệ thống MUST lưu trữ toàn bộ kho từ vựng tiếng Anh Oxford 3000 gồm 4 cấp độ CEFR (`A1`, `A2`, `B1`, `B2`) với đầy đủ 9 trường thông tin chuẩn hóa: `id`, `word`, `cefr_level`, `part_of_speech`, `phonetic`, `vietnamese_meaning`, `example_en`, `example_vi`, `topic_id`.
 - **FR-002**: Cột `word` MUST là chuỗi chữ sạch, KHÔNG chứa số chỉ mục homonym (như `close2`, `can2`), KHÔNG chứa ngoặc đơn chú thích (như `bear (animal)`), và KHÔNG chứa ký tự `\xa0`.
-- **FR-003**: Các từ có nhiều loại từ (multi-POS) MUST được tách thành các bản ghi độc lập trong bảng `vocabularies`, mỗi bản ghi tương ứng với một loại từ duy nhất trong 14 nhãn `part_of_speech` chuẩn từ Excel (`n.`, `v.`, `adj.`, `adv.`, `prep.`, `conj.`, `pron.`, `det.`, `modal v.`, `number`, `exclam.`, `article.`, `indefinite article.`, `infinitive marker`).
+- **FR-003**: Các từ có nhiều loại từ (multi-POS) MUST được tách thành các bản ghi độc lập trong bảng `vocabularies`, mỗi bản ghi tương ứng với một loại từ duy nhất trong 14 nhãn `part_of_speech` chuẩn từ Excel (`n.`, `v.`, `adj.`, `adv.`, `prep.`, `conj.`, `pron.`, `det.`, `modal v.`, `number`, `exclam.`, `article.`, `indefinite article.`, `infinitive marker`). Khi một bộ `(word, cefr_level, part_of_speech)` có nhiều nghĩa, `sense_number` là số nguyên liên tục bắt đầu từ 1 theo thứ tự xuất hiện trong file nguồn hiện tại của riêng bộ đó; thứ tự này phải được giữ ổn định khi nạp lại cùng một file. Khi thứ tự hoặc nội dung file nguồn thay đổi, seeder MUST đánh số lại từ 1 theo file mới và cập nhật đồng bộ các bản ghi.
 - **FR-004**: Cột `phonetic` MUST có giá trị 100% đầy đủ (không được để NULL hoặc rỗng), được định dạng chuẩn quốc tế đặt trong cặp dấu gạch chéo `^/.+/$` và KHÔNG chứa ký tự lỗi `*`.
 - **FR-005**: Hệ thống MUST định nghĩa đủ 16 chủ đề bài học chuẩn hóa (`topics`) theo dữ liệu thực tế Oxford 3000 (8 chủ đề cho A1–B1 và 8 chủ đề chuyên sâu cho B2):
   - *Nhóm A1–B1 (8 chủ đề)*: `daily_life` (Daily Life & Routines), `people_relationships` (People & Relationships), `education_work` (Education & Work), `travel_transport` (Travel & Transportation), `food_health` (Food & Health), `home_environment` (Home & Environment), `entertainment_media` (Entertainment & Media), `communication_feelings` (Communication & Feelings).
@@ -137,10 +144,10 @@ Người học hoặc các phân hệ khác (như Chatbot AI Tool Use) cần tra
 - **FR-010**: Hệ thống MUST cung cấp API `GET /api/v1/lessons` hỗ trợ tham số truy vấn công khai `level` (`A1`, `A2`, `B1`, `B2`) và `topicId` (số nguyên dương), ánh xạ tương ứng vào các cột database `cefr_level` và `topic_id`.
 - **FR-011**: Hệ thống MUST cung cấp API `GET /api/v1/lessons/:id` trả về thông tin chi tiết bài học và danh sách từ vựng theo thứ tự `order_in_lesson` phục vụ chu trình Học nạp.
 - **FR-012**: Hệ thống MUST cung cấp API `GET /api/v1/vocabularies/:id` trả về chi tiết một từ vựng và API `GET /api/v1/vocabularies/search?q=...&limit=...` hỗ trợ tìm kiếm từ vựng theo quy tắc chuẩn hóa:
-  - Khớp tiền tố (Prefix Match): Tìm kiếm theo tiền tố `word LIKE CONCAT(:sanitizedQ, '%')` sử dụng index `idx_vocab_word`.
+  - Khớp tiền tố (Prefix Match): Tìm kiếm theo tiền tố `LOWER(word) LIKE CONCAT(:sanitizedQ, '%')` sử dụng index `idx_vocab_word_lower`.
   - Escape ký tự đặc biệt: Ký tự wildcard `%` và `_` trong từ khóa $q$ bắt buộc phải được escape (`\%`, `\_`) để tránh wildcard injection.
   - Tham số đầu vào: $1 \le \text{length}(q) \le 100$, phân trang `limit` từ $1 \rightarrow 50$ (mặc định 20).
-  - Thứ tự kết quả tất định (Deterministic Ordering): Luôn sắp xếp theo `ORDER BY LENGTH(word) ASC, word ASC, cefr_level ASC, part_of_speech ASC`.
+  - Thứ tự kết quả tất định (Deterministic Ordering): Luôn sắp xếp theo `ORDER BY LENGTH(word) ASC, word ASC, cefr_level ASC, part_of_speech ASC, sense_number ASC`.
 - **FR-013**: Cột `audio_url` MUST chỉ lưu chuỗi đường dẫn URL tĩnh (Cloud Storage / CDN). Cơ sở dữ liệu MUST NOT lưu dữ liệu nhị phân (Blob/Base64) của file âm thanh trực tiếp vào PostgreSQL.
 - **FR-014**: Mọi phản hồi API MUST tuân thủ định dạng JSON envelope thống nhất:
   - Thành công ($2xx$): `{ "success": true, "data": ..., "error": null }`

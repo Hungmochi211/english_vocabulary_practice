@@ -10,7 +10,7 @@
 
 Gói tính năng này thiết lập nền móng dữ liệu cốt lõi cho ứng dụng học từ vựng:
 1. Xây dựng mô hình cơ sở dữ liệu PostgreSQL (bảng `topics`, `vocabularies`, `lessons`, `lesson_vocabularies`) với các chỉ mục chuyên dụng phục vụ thuật toán trắc nghiệm Distractor Selection và tra cứu tiền tố.
-2. Viết script Seeder tự động nạp toàn bộ $\ge 3.500$ từ vựng từ `tools/oxford_3000_vocabulary.xlsx` (4 cấp độ A1, A2, B1, B2) vào PostgreSQL với cơ chế Idempotent (chạy nhiều lần không trùng lặp).
+2. Viết script Seeder tự động nạp toàn bộ $\ge 3.500$ từ vựng từ `tools/oxford_3000_vocabulary.xlsx` (4 cấp độ A1, A2, B1, B2) vào PostgreSQL với cơ chế Idempotent (`UPSERT` theo bộ bốn `(word, cefr_level, part_of_speech, sense_number)` — đánh `sense_number` từ 1 theo thứ tự xuất hiện trong file nguồn cho từng `(word, cefr_level, part_of_speech)`, ví dụ `rock` A2 `n.` có `sense_number = 1, 2`; đánh lại từ 1 khi file nguồn thay đổi).
 3. Triển khai thuật toán phân bổ cân bằng (Balanced Partitioning) tự động chia kho từ thành các bài học chuẩn $15 - 18$ từ, cấm tuyệt đối bài học dưới 15 từ.
 4. Cung cấp bộ RESTful API chuẩn hóa để truy vấn danh mục bài học và chi tiết từ vựng phục vụ màn hình Học nạp (Acquisition Flashcard).
 
@@ -26,7 +26,7 @@ Chi tiết bảng dữ liệu và schema: xem [data-model.md](./data-model.md).
 
 **Primary Dependencies**:
 - Backend: `@nestjs/core`, `@nestjs/common`, `@nestjs/typeorm`, `typeorm`, `pg`, `class-validator`, `class-transformer`
-- File Processing & Excel: `exceljs` hoặc `xlsx`
+- File Processing & Excel: `exceljs`
 - Testing: `jest`, `supertest`
 
 **Storage**:
@@ -63,17 +63,17 @@ Chi tiết bảng dữ liệu và schema: xem [data-model.md](./data-model.md).
 
 | Điều khoản Hiến pháp | Đánh giá & Bằng chứng Tuân thủ | Kết quả |
 | :--- | :--- | :---: |
-| **I. Quy tắc & Dữ liệu từ Spec** | Dữ liệu nguồn lấy 100% từ `tools/oxford_3000_vocabulary.xlsx`. Giữ nguyên 9 cột chuẩn. Cột `word` đã được làm sạch không còn `close2`, `bear (animal)`, `\xa0`. Trường `audio_url` là VARCHAR(500), không dùng Blob. Phân định rõ kho từ vựng và bài học. | ✅ **PASS** |
+| **I. Quy tắc & Dữ liệu từ Spec** | Dữ liệu nguồn lấy 100% từ `tools/oxford_3000_vocabulary.xlsx`. Giữ nguyên 9 cột chuẩn. Cột `word` đã được làm sạch không còn `close2`, `bear (animal)`, `\xa0`. Phân biệt đa nghĩa cùng `(word, cefr_level, part_of_speech)` bằng `sense_number` đánh từ 1 theo thứ tự file nguồn (vd: `rock` A2 `n.` sense 1 & 2). Trường `audio_url` là VARCHAR(500), không dùng Blob. Phân định rõ kho từ vựng và bài học. | ✅ **PASS** |
 | **II. Chuẩn mực Sư phạm & Thuật toán** | Áp dụng thuật toán tìm kiếm nghiệm nguyên phân hoạch (Integer Partition Search) tại Research R3. Đảm bảo mọi bài học trước bài cuối có kích thước $15 \le size \le 18$; bài cuối tối đa $\le 20$. Tuyệt đối cấm tạo bài $< 15$ từ. Nhóm không hợp lệ bị từ chối tạo bài và ghi `[SEED_WARNING]`. | ✅ **PASS** |
-| **III. Test trước (Given/When/Then - TDD)** | Chu trình TDD được thiết lập nghiêm ngặt trong `tasks.md`: 100% các task viết test (T013, T015, T019, T022, T024) đều đứng trước task viết code và bắt buộc chạy ĐỎ (Red) trước khi làm XANH (Green). Toàn bộ 14 kịch bản `US1-AS1..5`, `US2-AS1..3`, `US3-AS1..3`, `US4-AS1..3` đều có test tự động tương ứng. | ✅ **PASS** |
+| **III. Test trước (Given/When/Then - TDD)** | Chu trình TDD được thiết lập nghiêm ngặt trong `tasks.md`: 100% các task viết test (T013, T015, T019, T022, T024) đều đứng trước task viết code và bắt buộc chạy ĐỎ (Red) trước khi làm XANH (Green). Toàn bộ 15 kịch bản `US1-AS1..6`, `US2-AS1..3`, `US3-AS1..3`, `US4-AS1..3` đều có test tự động tương ứng. | ✅ **PASS** |
 | **IV. Hợp đồng API & Kiến trúc** | Có file hợp đồng `contracts/openapi.yaml`. Sử dụng đúng NestJS, TypeORM, PostgreSQL 16+ (Docker `pgvector`, mã hóa `UTF-8`). Chuẩn hóa cả Success Envelope `{ success: true, data, error: null }` và Error Envelope `{ success: false, data: null, error: { code, message, details } }` qua `transform-response.interceptor.ts` và `http-exception.filter.ts`. | ✅ **PASS** |
 | **V. Bảo mật & Đơn giản trước** | Dùng `.env` và `class-validator` cho DTOs (query `level`, search `q` độ dài $1-100$, phân trang `limit` $1-50$). Cấu trúc module NestJS tiêu chuẩn, không thêm trừu tượng rườm rà (YAGNI). | ✅ **PASS** |
-| **VI. Cộng tác & Quản lý Task** | Toàn bộ 30 công việc được phân rã thành mã task `T001 - T030` rõ ràng trong `tasks.md`, phân định rõ ràng giữa `back-end/` và `tools/`. Xác định rõ ranh giới Feature 001 là Backend API; giao diện Frontend thuộc Feature 003. | ✅ **PASS** |
+| **VI. Cộng tác & Quản lý Task** | Toàn bộ 30 công việc được phân rã thành mã task `T001 - T030` rõ ràng trong `tasks.md`, phân định rõ ràng giữa `back-end/` và `tools/`. Xác định rõ ranh giới Feature 001 là Backend API; Chatbot AI thuộc Feature 003 và giao diện Frontend thuộc Feature 004. | ✅ **PASS** |
 
 **Gate Result**: Toàn bộ các phát hiện kiểm định (C1–C3, I1–I8, G1–G2, A1–A2, U1) đã được giải quyết triệt để và đồng bộ trên toàn bộ các artifact:
 - **A1**: Quy trình benchmark chuẩn (phần cứng tối thiểu, kết nối 100 vu, 1.000 requests, đo không cache) được xác định cụ thể trong SC-004, SC-005 và T028.
 - **I7**: US1-AS1 và T015 đã đồng bộ thể hiện ngoại lệ bài cuối ($15 \le size \le 20$) và vị trí cuối nhóm.
-- **A2**: Tra cứu từ vựng chuẩn hóa tìm kiếm tiền tố (Prefix Match), escape wildcard `%` và `_`, sắp xếp tất định `ORDER BY LENGTH(word), word, cefr_level, part_of_speech`.
+- **A2**: Tra cứu từ vựng chuẩn hóa tìm kiếm tiền tố (Prefix Match), escape wildcard `%` và `_`, sắp xếp tất định `ORDER BY LENGTH(word) ASC, word ASC, cefr_level ASC, part_of_speech ASC, sense_number ASC`.
 - **I8**: Mã lỗi `LESSON_NOT_FOUND`, `VOCABULARY_NOT_FOUND`, `VALIDATION_ERROR` và trường `details` đồng bộ giữa `spec.md`, `contracts/openapi.yaml` và `tasks.md`.
 - **G2**: Bổ sung đầy đủ các kịch bản kiểm thử biên cho Transaction Rollback, `/topics`, giới hạn tham số và xử lý lỗi vào T015, T019, T024.
 

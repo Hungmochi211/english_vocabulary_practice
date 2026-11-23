@@ -1,0 +1,539 @@
+openapi: 3.0.3
+info:
+  title: English Vocabulary Practice - Core Backend API (002-backend-core)
+  description: >
+    Hợp đồng RESTful API cho xác thực người dùng, học theo chu trình 2 bước, sinh đề & chấm điểm thông minh,
+    ôn tập ngắt quãng SuperMemo SM-2 / 5 Hộp Leitner, thống kê Streak và tác vụ nhắc học 20:00.
+    Tuân thủ cấu trúc phản hồi thống nhất theo Hiến pháp Điều IV.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local Development Server
+
+tags:
+  - name: Auth
+    description: Đăng ký, đăng nhập, Google OAuth, đổi mật khẩu, xoay vòng token
+  - name: Users
+    description: Hồ sơ cá nhân & quản trị người dùng
+  - name: Learning
+    description: Lộ trình học, Bước 1 Học nạp, Bước 2 Học áp dụng & Kiểm tra tổng hợp
+  - name: Reviews
+    description: Ôn tập dài hạn theo thuật toán SuperMemo SM-2 & 5 Hộp Leitner
+  - name: Stats
+    description: Thống kê Streak, biểu đồ 7 ngày và phân bố Hộp Leitner
+
+paths:
+  /auth/register:
+    post:
+      summary: Đăng ký tài khoản bằng Email & Mật khẩu
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, fullName]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  maxLength: 255
+                password:
+                  type: string
+                  minLength: 8
+                  maxLength: 72
+                  description: Phải chứa ít nhất 1 chữ cái và 1 chữ số
+                fullName:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+      responses:
+        '201':
+          description: Đăng ký thành công, cấp cặp Access Token + Refresh Token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          description: Email đã tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      summary: Đăng nhập bằng Email & Mật khẩu
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Đăng nhập thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '401':
+          description: Sai thông tin đăng nhập (không tiết lộ tài khoản tồn tại hay không)
+        '429':
+          description: Vượt ngưỡng đăng nhập thất bại theo IP hoặc tài khoản
+
+  /auth/google:
+    post:
+      summary: Đăng nhập một chạm bằng Google ID Token (OAuth 2.0)
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [idToken]
+              properties:
+                idToken:
+                  type: string
+      responses:
+        '200':
+          description: Xác thực Google thành công (tạo mới hoặc liên kết tài khoản cùng email)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '401':
+          description: Token Google không hợp lệ hoặc email Google chưa xác thực (`EMAIL_NOT_VERIFIED`)
+
+  /auth/refresh:
+    post:
+      summary: Làm mới phiên đăng nhập (Refresh Token Rotation + Reuse Detection)
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Cấp cặp Access Token & Refresh Token mới, vô hiệu hóa mã cũ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '401':
+          description: Refresh Token hết hạn, đã thu hồi hoặc bị dùng lại (`TOKEN_REUSE_DETECTED`)
+
+  /auth/logout:
+    post:
+      summary: Đăng xuất phiên hiện tại (thu hồi ngay Refresh Token)
+      tags: [Auth]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Đăng xuất thành công (access token cũ hết hạn tự nhiên tối đa 15 phút)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptySuccessResponse'
+
+  /auth/change-password:
+    post:
+      summary: Đổi mật khẩu và thu hồi ngay toàn bộ phiên trên mọi thiết bị
+      tags: [Auth]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 8
+                  maxLength: 72
+      responses:
+        '200':
+          description: Đổi mật khẩu thành công, tăng token_version và thu hồi mọi token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptySuccessResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          description: Mật khẩu hiện tại không đúng (`INVALID_CURRENT_PASSWORD`)
+
+  /users/me:
+    get:
+      summary: Lấy thông tin hồ sơ cá nhân của người dùng đang đăng nhập
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Thông tin hồ sơ người học
+    patch:
+      summary: Cập nhật họ tên, ảnh đại diện, mục tiêu CEFR và tùy chọn email nhắc học
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullName:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                avatarUrl:
+                  type: string
+                  nullable: true
+                targetLevel:
+                  type: string
+                  enum: [A1, A2, B1, B2]
+                emailReminderEnabled:
+                  type: boolean
+      responses:
+        '200':
+          description: Cập nhật hồ sơ thành công
+
+  /learning/lessons:
+    get:
+      summary: Lấy danh sách bài học kèm trạng thái mở khóa, hoàn thành & điểm cao nhất của người học
+      tags: [Learning]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: level
+          in: query
+          schema:
+            type: string
+            enum: [A1, A2, B1, B2]
+        - name: topicId
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Danh sách bài học kèm `isUnlocked`, `acquisitionCompleted`, `isCompleted`, `bestScore`
+
+  /learning/lessons/{lessonId}/cards/{vocabularyId}/open:
+    post:
+      summary: Ghi nhận học viên đã mở 1 thẻ từ vựng trong Bước 1 (Học nạp)
+      tags: [Learning]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lessonId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: vocabularyId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Trả về số thẻ đã mở, tổng số thẻ và cờ `acquisitionCompleted`
+        '403':
+          description: Bài học đang bị khóa (`LESSON_LOCKED`)
+        '404':
+          description: Không tìm thấy bài học hoặc từ không thuộc bài học
+
+  /learning/lessons/{lessonId}/practice/start:
+    post:
+      summary: Bắt đầu Bước 2 (Học áp dụng) — sinh đề bài tập cho toàn bộ từ trong bài học
+      tags: [Learning]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lessonId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Trả về `attemptId` và danh sách câu hỏi (ẩn đáp án đúng)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizAttemptStartResponse'
+        '403':
+          description: Chưa hoàn thành Bước 1 (`ACQUISITION_REQUIRED`) hoặc bài đang khóa (`LESSON_LOCKED`)
+
+  /learning/quizzes/mixed/start:
+    post:
+      summary: Sinh bài Kiểm tra tổng hợp bằng Stratified Sampling trên các chủ đề đã học
+      tags: [Learning]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                totalQuestions:
+                  type: integer
+                  minimum: 5
+                  maximum: 40
+                  default: 20
+      responses:
+        '201':
+          description: Trả về `attemptId` và danh sách câu hỏi phân tầng đều theo chủ đề
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizAttemptStartResponse'
+
+  /learning/quizzes/{attemptId}/submit:
+    post:
+      summary: Nộp bài tập thực hành / ôn tập SM-2 / kiểm tra tổng hợp để chấm điểm & cập nhật SM-2, Streak
+      tags: [Learning]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: attemptId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [answers]
+              properties:
+                answers:
+                  type: array
+                  items:
+                    type: object
+                    required: [vocabularyId, responseTimeMs]
+                    properties:
+                      vocabularyId:
+                        type: integer
+                      userAnswer:
+                        type: string
+                        nullable: true
+                        maxLength: 100
+                      responseTimeMs:
+                        type: integer
+                        minimum: 0
+                        maximum: 300000
+      responses:
+        '200':
+          description: Kết quả chi tiết từng câu, tổng điểm %, trạng thái mở khóa bài kế tiếp, SM-2 & Streak
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          description: Phiên làm bài đã được nộp trước đó (`ATTEMPT_ALREADY_SUBMITTED`)
+
+  /reviews/due:
+    get:
+      summary: Lấy danh sách từ vựng đến hạn ôn tập SM-2 hôm nay (UTC+7)
+      tags: [Reviews]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        '200':
+          description: Trả về `totalDue` và danh sách thẻ sắp xếp theo `leitnerBox ASC, nextReviewDate ASC`
+
+  /reviews/session/start:
+    post:
+      summary: Khởi tạo 1 phiên ôn tập SM-2 cho các từ đến hạn hôm nay
+      tags: [Reviews]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 50
+                  default: 20
+      responses:
+        '201':
+          description: Trả về `attemptId` và câu hỏi ôn tập (nộp qua `/learning/quizzes/{attemptId}/submit`)
+
+  /stats/overview:
+    get:
+      summary: Lấy thống kê chuỗi ngày học (Streak), phân bố 5 Hộp Leitner và biểu đồ 7 ngày gần nhất
+      tags: [Stats]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Số liệu thống kê cá nhân theo múi giờ UTC+7
+
+  /admin/users:
+    get:
+      summary: Danh sách học viên (Chỉ dành cho Admin)
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Danh sách người dùng phân trang
+        '403':
+          description: Không đủ quyền quản trị (`FORBIDDEN`)
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    ValidationError:
+      description: Dữ liệu đầu vào không hợp lệ
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    AuthSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            accessToken:
+              type: string
+            refreshToken:
+              type: string
+            expiresInSeconds:
+              type: integer
+              example: 900
+            user:
+              type: object
+        error:
+          nullable: true
+          example: null
+
+    EmptySuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          nullable: true
+          example: null
+        error:
+          nullable: true
+          example: null
+
+    QuizAttemptStartResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            attemptId:
+              type: integer
+            attemptType:
+              type: string
+              enum: [lesson_practice, sm2_review, mixed_quiz]
+            totalQuestions:
+              type: integer
+            questions:
+              type: array
+              items:
+                type: object
+                properties:
+                  vocabularyId:
+                    type: integer
+                  practiceMode:
+                    type: string
+                    enum: [multiple_choice, typing, dictation]
+                  prompt:
+                    type: object
+        error:
+          nullable: true
+          example: null
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        data:
+          nullable: true
+          example: null
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              nullable: true
+          required: [code, message, details]

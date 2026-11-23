@@ -8,7 +8,7 @@ description: "Task list for feature 001-vocabulary-data"
 
 **Prerequisites**: Docker + PostgreSQL 16+ (`pgvector/pgvector:pg16`), Node.js 22 LTS, `tools/oxford_3000_vocabulary.xlsx`
 
-**Test-Driven Development (TDD)**: BẮT BUỘC theo Hiến pháp Điều III. Mọi tác vụ kiểm thử (Unit / Integration Test) MUST được viết trước và chạy ĐỎ (Red) trước khi thực hiện tác vụ viết mã nguồn (Green). Mỗi kịch bản Given/When/Then trong `spec.md` (tổng cộng 14 kịch bản) đều có đúng một test case tự động tương ứng với định danh `USx-ASy`.
+**Test-Driven Development (TDD)**: BẮT BUỘC theo Hiến pháp Điều III. Mọi tác vụ kiểm thử (Unit / Integration Test) MUST được viết trước và chạy ĐỎ (Red) trước khi thực hiện tác vụ viết mã nguồn (Green). Mỗi kịch bản Given/When/Then trong `spec.md` (tổng cộng 15 kịch bản) đều có đúng một test case tự động tương ứng với định danh `USx-ASy`.
 
 **Format**: `[ID] [P?] [Story] Description`
 - **[P]**: Chạy song song được (khác file, không phụ thuộc task chưa xong).
@@ -23,7 +23,7 @@ description: "Task list for feature 001-vocabulary-data"
 - [ ] T001 Khởi tạo dự án NestJS tại thư mục `back-end/` (nếu chưa có): cài đặt `@nestjs/core`, `@nestjs/common`, `@nestjs/platform-express`, `reflect-metadata`, `rxjs`, `typescript`
 - [ ] T002 [P] Cài đặt dependencies cơ sở dữ liệu & validation: `@nestjs/typeorm`, `typeorm`, `pg`, `class-validator`, `class-transformer`
 - [ ] T003 [P] Cài đặt dependencies đọc file Excel: `exceljs`
-- [ ] T004 [P] Tạo file `back-end/.env.example` và `back-end/.env`: cấu hình `DB_HOST`, `DB_PORT=5432`, `DB_USERNAME=postgres`, `DB_PASSWORD`, `DB_DATABASE=english_vocab_db`, `PORT=3000`
+- [ ] T004 [P] Bảo đảm `.gitignore` (root và `back-end/.gitignore`) loại trừ `.env` và `.env.*` (chỉ giữ `.env.example`); tạo file mẫu `back-end/.env.example` chỉ chứa giá trị giả lập không nhạy cảm (`DB_HOST`, `DB_PORT=5432`, `DB_USERNAME=postgres`, `DB_PASSWORD=changeme`, `DB_DATABASE=english_vocab_db`, `PORT=3000`) và tạo `back-end/.env` cục bộ bị Git bỏ qua (Constitution Điều V)
 - [ ] T005 [P] Cấu hình TypeORM DataSource và database configuration trong `back-end/src/config/database.config.ts`: thiết lập `type: 'postgres'`, múi giờ `Asia/Ho_Chi_Minh` (`+07:00`), tự động load entities
 
 ---
@@ -33,7 +33,7 @@ description: "Task list for feature 001-vocabulary-data"
 **Purpose**: Xây dựng toàn bộ mô hình bảng dữ liệu quan hệ PostgreSQL theo đúng `data-model.md` và chuẩn hóa vỏ bọc API.
 
 - [ ] T006 [P] Tạo Entity `Topic` trong `back-end/src/modules/vocabulary/entities/topic.entity.ts`: các cột `id`, `code` (unique), `name`, `name_vi`, `description`, `createdAt`; quan hệ 1-n tới `Lesson` và `Vocabulary` (data-model 1.1)
-- [ ] T007 [P] Tạo Entity `Vocabulary` trong `back-end/src/modules/vocabulary/entities/vocabulary.entity.ts`: các cột `id`, `word`, `cefrLevel` (enum A1-B2), `partOfSpeech` (14 nhãn chuẩn từ Excel), `senseNumber` (smallint, default 1), `phonetic`, `vietnameseMeaning` (varchar 255), `exampleEn`, `exampleVi`, `topicId`, `audioUrl` (varchar 500, nullable), `createdAt`, `updatedAt`; composite unique key `(word, cefrLevel, partOfSpeech, senseNumber)`; index `(LOWER(word) text_pattern_ops)` và index `(cefrLevel, partOfSpeech, topicId)` (data-model 1.2, FR-001, FR-003, FR-013)
+- [ ] T007 [P] Tạo Entity `Vocabulary` trong `back-end/src/modules/vocabulary/entities/vocabulary.entity.ts`: các cột `id`, `word`, `cefrLevel` (enum A1-B2), `partOfSpeech` (14 nhãn chuẩn từ Excel), `senseNumber` (smallint, default 1), `phonetic`, `vietnameseMeaning` (varchar 255), `exampleEn`, `exampleVi`, `topicId`, `audioUrl` (varchar 500, nullable), `createdAt`, `updatedAt`; composite unique key `unique_word_level_pos_sense` `(word, cefrLevel, partOfSpeech, senseNumber)`; index `idx_vocab_word_lower` `(LOWER(word) text_pattern_ops)` và index `idx_vocab_distractor` `(cefrLevel, partOfSpeech, topicId)` (data-model 1.2, FR-001, FR-003, FR-012, FR-013)
 - [ ] T008 [P] Tạo Entity `Lesson` trong `back-end/src/modules/vocabulary/entities/lesson.entity.ts`: các cột `id`, `topicId`, `cefrLevel`, `title`, `orderIndex`, `wordCount`, `createdAt`; index `(cefrLevel, topicId)` (data-model 1.3, FR-006, FR-007)
 - [ ] T009 [P] Tạo Entity `LessonVocabulary` trong `back-end/src/modules/vocabulary/entities/lesson-vocabulary.entity.ts`: các cột `id`, `lessonId`, `vocabularyId`, `orderInLesson`; unique `(lessonId, vocabularyId)`, unique `(lessonId, orderInLesson)` (data-model 1.4)
 - [ ] T010 Viết file TypeORM Migration `back-end/src/database/migrations/1700000000001-CreateVocabularyCoreTables.ts` chứa trọn vẹn 4 bảng theo script DDL trong `data-model.md`
@@ -54,7 +54,7 @@ description: "Task list for feature 001-vocabulary-data"
   - `Test với 37 từ vựng -> tạo 2 bài học (18, 19 từ, bài 19 từ nằm ở cuối nhóm)`
   - `Test với 48 từ vựng -> tạo 3 bài học (16, 16, 16 từ)`
   - `Test với 92 từ vựng -> tạo 5 bài học (18, 18, 18, 18, 20 từ - bài 20 từ ở cuối nhóm)`
-  - `Test với 124 từ vựng -> tạo 7 bài học (17, 17, 18, 18, 18, 18, 18 từ - ưu tiên k nhỏ nhất)`
+  - `Test với 124 từ vựng -> tạo 7 bài học (17, 17, 18, 18, 18, 18, 18 từ - ưu tiên k nhỏ nhất) (US1-AS6)`
   - `Test với 14 từ vựng (< 15 từ) -> trả về isValid: false, 0 bài học và cảnh báo SEED_WARNING`
   - `Test với 25 từ vựng (khoảng không hợp lệ 21-29) -> trả về isValid: false, 0 bài học và cảnh báo SEED_WARNING`
   - `Test với 42 từ vựng (khoảng không hợp lệ 41-44) -> trả về isValid: false, 0 bài học và cảnh báo SEED_WARNING`
@@ -63,13 +63,14 @@ description: "Task list for feature 001-vocabulary-data"
 - [ ] T015 [US1] [P] **(TDD Red)** Viết Integration Test cho Seeder trong `back-end/tests/integration/seeder.test.ts`:
   - `US1-AS1: Test Seeder nạp database trống -> nạp đủ 16 chủ đề, tổng từ vựng >= 3.500 dòng; kiểm tra 100% các bài trước bài cuối có 15-18 từ, bài cuối cùng mỗi nhóm có 15-20 từ; 0 bài học nào < 15 từ` (I7)
   - `US1-AS2: Test Chạy Seeder lần thứ 2 -> tổng số dòng không thay đổi, không sinh duplicate key, dữ liệu idempotent`
+  - `Test sense_number: cùng file nguồn luôn tạo cùng số nghĩa (vd: rock A2 n. -> sense_number 1, 2); khi đổi thứ tự hoặc nội dung file, seeder đánh lại số từ 1 và cập nhật đồng bộ các bản ghi`
   - `US1-AS5: Test kiểm tra dữ liệu từ vựng nạp vào -> 100% cột word sạch (không chứa số, ngoặc đơn, \xa0), 100% phonetic định dạng ^/.+/$ không chứa *`
   - `Test Transaction Rollback: Giả lập lỗi chèn dữ liệu giữa chừng -> xác nhận toàn bộ transaction bị rollback sạch sẽ, 0 để lại dữ liệu dở dang` (G2)
 - [ ] T016 [US1] Viết seeder nạp 16 chủ đề chuẩn hóa trong `back-end/src/database/seeds/topic.seeder.ts`: nạp đủ 16 chủ đề song ngữ theo FR-005 (8 chủ đề A1–B1 và 8 chủ đề B2), cơ chế Idempotent không chèn trùng `code`
 - [ ] T017 [US1] **(TDD Green)** Viết seeder nạp từ vựng và bài học trong `back-end/src/database/seeds/vocabulary.seeder.ts`:
   - Đọc 4 sheets `A1`, `A2`, `B1`, `B2` từ `../tools/oxford_3000_vocabulary.xlsx`
-  - Sanitize dữ liệu: xóa số chỉ mục, ngoặc đơn ngữ cảnh, chuyển `\xa0` thành `\x20`, validate regex `^/.+/$`, gán `sense_number` tuần tự (`1, 2...`) cho các nghĩa trùng `(word, cefrLevel, partOfSpeech)`
-  - Bọc trong Database Transaction: Batch insert vào bảng `vocabularies` (100 dòng/lô) với cơ chế `UPSERT` theo khóa `(word, cefrLevel, partOfSpeech, senseNumber)`
+  - Sanitize dữ liệu: xóa số chỉ mục, ngoặc đơn ngữ cảnh, chuyển `\xa0` thành `\x20`, validate regex `^/.+/$`, đánh lại `sense_number` từ 1 theo thứ tự xuất hiện trong file nguồn hiện tại cho từng `(word, cefrLevel, partOfSpeech)` mỗi lần nạp (vd: `rock` A2 `n.` $\rightarrow$ 1, 2; `rest` A2 `n.` $\rightarrow$ 1, 2)
+  - Bọc trong Database Transaction: Batch insert vào bảng `vocabularies` (100 dòng/lô) với cơ chế `UPSERT` theo khóa `(word, cefrLevel, partOfSpeech, senseNumber)` và đồng bộ dọn các `sense_number` dư thừa nếu số nghĩa của từ trong file mới giảm đi
   - Khi chia bài học: xóa sạch `lesson_vocabularies` và `lessons` cũ của `(topicId, cefrLevel)` trước khi tạo mới để đảm bảo Idempotency (Research R5)
   - Áp dụng `chunkVocabulariesIntoLessons`: nếu nhóm không thể phân hoạch thì ghi log `[SEED_WARNING]` và giữ từ trong kho mà không tạo bài
 - [ ] T018 [US1] Tạo script chạy CLI trong `back-end/package.json`: `"seed:vocab": "ts-node src/database/seeds/run-seed.ts"`. Chạy test T015 xác nhận XANH (Green).
@@ -105,7 +106,7 @@ description: "Task list for feature 001-vocabulary-data"
 **Purpose**: Cung cấp API tra cứu từ điển nhanh và công cụ Tool Use cho Chatbot AI theo chu trình TDD.
 
 - [ ] T024 [US4] [P] **(TDD Red)** Viết Integration Test cho API tra cứu từ vựng trong `back-end/tests/integration/vocab-search.test.ts`:
-  - `US4-AS1: Tra cứu GET /api/v1/vocabularies/search?q=close -> trả về 2 bản ghi độc lập: A2 (adj.) và B2 (n.) với nghĩa riêng biệt theo thứ tự tất định (ORDER BY LENGTH(word), word, cefr_level, part_of_speech)` (A2)
+  - `US4-AS1: Tra cứu GET /api/v1/vocabularies/search?q=close -> trả về 2 bản ghi độc lập: A2 (adj.) và B2 (n.) với nghĩa riêng biệt; tra cứu GET /api/v1/vocabularies/search?q=rock -> trả về đầy đủ cả sense_number 1 và 2 theo thứ tự tất định (ORDER BY LENGTH(word) ASC, word ASC, cefr_level ASC, part_of_speech ASC, sense_number ASC)` (A2, FR-012)
   - `US4-AS2: Tra cứu GET /api/v1/vocabularies/search?q=  ABANDON   -> tự động trim và lowercase, tìm đúng từ abandon`
   - `US4-AS3: Tra cứu GET /api/v1/vocabularies/search?q=nonexistentword123 -> trả về mảng rỗng [] với mã 200 OK`
   - `Test Prefix Match & SQL Wildcard: Tra cứu từ khóa chứa '%' hoặc '_' -> xác nhận escape ký tự tìm kiếm chính xác, không quét wildcard toàn bảng` (A2, G2)
@@ -123,7 +124,7 @@ description: "Task list for feature 001-vocabulary-data"
 
 **Purpose**: Xác nhận 100% test xanh, đo đạc hiệu năng theo quy trình có thể lặp lại và kiểm định chất lượng theo Hiến pháp.
 
-- [ ] T027 Chạy toàn bộ test suite (`npm run test`): xác nhận 100% test cases (đủ 14 kịch bản `US1-AS1..5`, `US2-AS1..3`, `US3-AS1..3`, `US4-AS1..3` cùng các test trường hợp biên rollback, validation, limit) đều ĐẠT (Green)
+- [ ] T027 Chạy toàn bộ test suite (`npm run test`): xác nhận 100% test cases (đủ 15 kịch bản `US1-AS1..6`, `US2-AS1..3`, `US3-AS1..3`, `US4-AS1..3` cùng các test trường hợp biên rollback, validation, limit) đều ĐẠT (Green)
 - [ ] T028 [P] Thực thi kịch bản kiểm tra hiệu năng lặp lại chuẩn trong `back-end/tests/benchmark/performance.bench.ts`:
   - Cấu hình môi trường đo chuẩn (A1): Máy phát triển cục bộ (tối thiểu 4 CPU cores, 8GB RAM, SSD; Node.js 22 LTS, PostgreSQL 16+ Docker, pool size 10)
   - Đo thời gian Seeder (SC-004): chạy seed trên database trống sau migration, đo từ lúc đọc file Excel đến khi commit hoàn tất $\rightarrow$ ghi nhận $< 15$ giây

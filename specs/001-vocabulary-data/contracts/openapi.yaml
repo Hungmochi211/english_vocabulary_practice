@@ -100,7 +100,7 @@ paths:
   /vocabularies/search:
     get:
       summary: Tra cứu từ vựng theo từ khóa
-      description: Tìm kiếm theo tiền tố từ tiếng Anh (Prefix Match, không phân biệt hoa thường, tự động escape ký tự wildcard % và _), sắp xếp tất định theo ORDER BY LENGTH(word) ASC, word ASC, cefr_level ASC, part_of_speech ASC. Phục vụ tra cứu từ điển nhanh và Chatbot Function Calling.
+      description: Tìm kiếm theo tiền tố từ tiếng Anh (Prefix Match, không phân biệt hoa thường, tự động escape ký tự wildcard % và _), sắp xếp tất định theo ORDER BY LENGTH(word) ASC, word ASC, cefr_level ASC, part_of_speech ASC, sense_number ASC. Phục vụ tra cứu từ điển nhanh và Chatbot Function Calling.
       tags:
         - Vocabularies
       parameters:
@@ -239,6 +239,10 @@ components:
         partOfSpeech:
           type: string
           example: v.
+        senseNumber:
+          type: integer
+          minimum: 1
+          example: 1
         phonetic:
           type: string
           example: /əˈbæn.dən/

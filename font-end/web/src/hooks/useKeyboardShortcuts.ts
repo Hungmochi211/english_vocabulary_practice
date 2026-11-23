@@ -1,0 +1,61 @@
+import { useEffect } from 'react';
+
+export interface ShortcutHandlers {
+  onQuickSearch?: () => void;
+  onEscape?: () => void;
+  onSpace?: () => void;
+  onEnter?: () => void;
+  onDigit?: (digit: 1 | 2 | 3 | 4) => void;
+  enabled?: boolean;
+}
+
+export function useKeyboardShortcuts({
+  onQuickSearch,
+  onEscape,
+  onSpace,
+  onEnter,
+  onDigit,
+  enabled = true,
+}: ShortcutHandlers): void {
+  useEffect(() => {
+    if (!enabled) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName ?? '';
+      const isEditable = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || Boolean(target?.isContentEditable);
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k' && onQuickSearch) {
+        event.preventDefault();
+        onQuickSearch();
+        return;
+      }
+
+      if (event.key === 'Escape' && onEscape) {
+        onEscape();
+        return;
+      }
+
+      if (isEditable) return;
+
+      if (event.code === 'Space' && onSpace) {
+        event.preventDefault();
+        onSpace();
+        return;
+      }
+
+      if (event.key === 'Enter' && onEnter) {
+        event.preventDefault();
+        onEnter();
+        return;
+      }
+
+      if (onDigit && ['1', '2', '3', '4'].includes(event.key)) {
+        onDigit(Number(event.key) as 1 | 2 | 3 | 4);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [enabled, onDigit, onEnter, onEscape, onQuickSearch, onSpace]);
+}

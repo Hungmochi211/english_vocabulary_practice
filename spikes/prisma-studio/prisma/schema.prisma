@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model lesson_vocabularies {
+  id              Int          @id @default(autoincrement())
+  lesson_id       Int
+  vocabulary_id   Int
+  order_in_lesson Int
+  lessons         lessons      @relation(fields: [lesson_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  vocabularies    vocabularies @relation(fields: [vocabulary_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([lesson_id, order_in_lesson], map: "unique_lesson_order")
+  @@unique([lesson_id, vocabulary_id], map: "unique_lesson_word")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model lessons {
+  id                  Int                   @id @default(autoincrement())
+  topic_id            Int
+  cefr_level          cefr_level_enum
+  title               String                @db.VarChar(150)
+  order_index         Int
+  word_count          Int                   @default(0)
+  created_at          DateTime              @default(now()) @db.Timestamptz(6)
+  lesson_vocabularies lesson_vocabularies[]
+  topics              topics                @relation(fields: [topic_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([cefr_level, topic_id], map: "idx_lesson_level_topic")
+}
+
+model migrations {
+  id        Int    @id(map: "PK_8c82d7f526340ab734260ea46be") @default(autoincrement())
+  timestamp BigInt
+  name      String @db.VarChar
+}
+
+model topics {
+  id           Int            @id @default(autoincrement())
+  code         String         @unique @db.VarChar(50)
+  name         String         @db.VarChar(100)
+  name_vi      String         @db.VarChar(100)
+  description  String?
+  created_at   DateTime       @default(now()) @db.Timestamptz(6)
+  lessons      lessons[]
+  vocabularies vocabularies[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model vocabularies {
+  id                  Int                   @id @default(autoincrement())
+  word                String                @db.VarChar(100)
+  cefr_level          cefr_level_enum
+  part_of_speech      String                @db.VarChar(30)
+  sense_number        Int                   @default(1) @db.SmallInt
+  phonetic            String                @db.VarChar(100)
+  vietnamese_meaning  String                @db.VarChar(255)
+  example_en          String
+  example_vi          String
+  topic_id            Int
+  audio_url           String?               @db.VarChar(500)
+  created_at          DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime              @default(now()) @db.Timestamptz(6)
+  lesson_vocabularies lesson_vocabularies[]
+  topics              topics                @relation(fields: [topic_id], references: [id], onUpdate: NoAction)
+
+  @@unique([word, cefr_level, part_of_speech, sense_number], map: "unique_word_level_pos_sense")
+  @@index([cefr_level, part_of_speech, topic_id], map: "idx_vocab_distractor")
+}
+
+enum cefr_level_enum {
+  A1
+  A2
+  B1
+  B2
+}

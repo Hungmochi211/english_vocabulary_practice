@@ -54,9 +54,6 @@ const API_BASE_URL =
 export const rawAxios = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 let refreshPromise: Promise<AuthSession> | null = null;
@@ -100,6 +97,9 @@ rawAxios.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (session?.accessToken && !config.headers.Authorization) {
     config.headers.Authorization = `Bearer ${session.accessToken}`;
   }
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    config.headers.delete('Content-Type');
+  }
   return config;
 });
 
@@ -117,6 +117,20 @@ function toApiError(error: unknown): ApiError {
         0,
         'NETWORK_ERROR',
         'Không thể kết nối tới máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.',
+      );
+    }
+    if (status === 429) {
+      return new ApiError(
+        429,
+        'RATE_LIMIT_EXCEEDED',
+        'Bạn thao tác quá nhanh, vui lòng thử lại sau ít phút.',
+      );
+    }
+    if (status === 503) {
+      return new ApiError(
+        503,
+        'SERVICE_UNAVAILABLE',
+        'Dịch vụ tạm thời gián đoạn. Vui lòng thử lại sau ít phút.',
       );
     }
     return new ApiError(status, `HTTP_${status}`, err.message || 'Đã xảy ra lỗi không xác định.');
@@ -148,18 +162,30 @@ rawAxios.interceptors.response.use(
       originalConfig?.url?.includes('/auth/refresh');
 
     if (status === 401 && originalConfig && !originalConfig._retry && !isAuthEndpoint) {
-      const hasSession = Boolean(getStoredSession()?.refreshToken);
-      if (hasSession) {
+      const storedSession = getStoredSession();
+      if (storedSession?.refreshToken) {
         originalConfig._retry = true;
         try {
           const nextSession = await performSingleFlightRefresh();
           originalConfig.headers.Authorization = `Bearer ${nextSession.accessToken}`;
+          if (originalConfig.url?.includes('/auth/logout') && nextSession.refreshToken) {
+            originalConfig.data = JSON.stringify({ refreshToken: nextSession.refreshToken });
+          }
           return rawAxios(originalConfig);
         } catch (refreshErr) {
-          setStoredSession(null);
-          onSessionInvalid?.('expired');
-          return Promise.reject(toApiError(refreshErr));
+          const apiErr = toApiError(refreshErr);
+          if (apiErr.status === 401) {
+            setStoredSession(null);
+            onSessionInvalid?.('expired');
+          } else if (apiErr.status === 403 && apiErr.code === 'ACCOUNT_DISABLED') {
+            setStoredSession(null);
+            onSessionInvalid?.('disabled');
+          }
+          return Promise.reject(apiErr);
         }
+      } else if (storedSession) {
+        setStoredSession(null);
+        onSessionInvalid?.('expired');
       }
     }
 

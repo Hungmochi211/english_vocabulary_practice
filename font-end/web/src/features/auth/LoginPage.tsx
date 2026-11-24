@@ -10,19 +10,43 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Vui lòng nhập mật khẩu.'),
 });
 
+function getSafeRedirectPath(raw: string | null): string {
+  if (!raw) return '/';
+  return raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
+}
+
+function getReasonNotice(reason: string | null): { tone: 'error' | 'info'; message: string } | null {
+  if (reason === 'expired') {
+    return { tone: 'error', message: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.' };
+  }
+  if (reason === 'disabled') {
+    return {
+      tone: 'error',
+      message: 'Tài khoản của bạn đã bị tạm khóa. Vui lòng liên hệ Quản trị viên.',
+    };
+  }
+  if (reason === 'password_changed') {
+    return {
+      tone: 'info',
+      message: 'Đổi mật khẩu thành công. Vui lòng đăng nhập lại bằng mật khẩu mới.',
+    };
+  }
+  return null;
+}
+
 export function LoginPage() {
   const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
-  const redirectTo = params.get('redirect') || '/';
-  const reason = params.get('reason');
+  const redirectTo = getSafeRedirectPath(params.get('redirect'));
+  const reasonNotice = getReasonNotice(params.get('reason'));
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(
-    reason === 'expired' ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.' : null,
+    reasonNotice?.tone === 'error' ? reasonNotice.message : null,
   );
   const [submitting, setSubmitting] = useState(false);
 
@@ -85,6 +109,15 @@ export function LoginPage() {
             <p className="text-xs font-medium text-slate-500">Đăng nhập để tiếp tục lộ trình từ vựng</p>
           </div>
         </div>
+
+        {reasonNotice?.tone === 'info' && !fieldError && !serverError && (
+          <div
+            role="status"
+            className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-sm font-medium text-emerald-800"
+          >
+            {reasonNotice.message}
+          </div>
+        )}
 
         {(fieldError || serverError) && (
           <div

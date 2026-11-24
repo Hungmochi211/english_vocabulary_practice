@@ -1,9 +1,22 @@
 import { httpClient } from '@/services/api/httpClient';
 import type { DueReviewsResponse, QuizAttemptStart } from '@/types/models';
 
+type RawDueReviewsResponse = Partial<DueReviewsResponse> & {
+  totalDue?: number;
+};
+
 export const reviewApi = {
-  getDueReviews(): Promise<DueReviewsResponse> {
-    return httpClient.get<DueReviewsResponse>('/reviews/due');
+  async getDueReviews(limit = 20): Promise<DueReviewsResponse> {
+    const safeLimit = Math.max(1, Math.min(50, Math.round(limit)));
+    const raw = await httpClient.get<RawDueReviewsResponse>('/reviews/due', {
+      params: { limit: safeLimit },
+    });
+    const items = Array.isArray(raw?.items) ? raw.items : [];
+    return {
+      dueCount: raw?.dueCount ?? raw?.totalDue ?? items.length,
+      leitnerDistribution: raw?.leitnerDistribution,
+      items,
+    };
   },
 
   startSm2Session(limit = 20): Promise<QuizAttemptStart> {

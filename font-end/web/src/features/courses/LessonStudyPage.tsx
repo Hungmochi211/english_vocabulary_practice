@@ -59,6 +59,17 @@ export function LessonStudyPage() {
     enabled: Number.isFinite(lessonId) && lessonId > 0,
   });
 
+  const progressListQuery = useQuery({
+    queryKey: ['learning', 'lessons', '', null],
+    queryFn: () => learningApi.listLessons(),
+    enabled: Number.isFinite(lessonId) && lessonId > 0,
+  });
+
+  const serverLessonProgress = useMemo(
+    () => progressListQuery.data?.find((item) => item.lessonId === lessonId) ?? null,
+    [lessonId, progressListQuery.data],
+  );
+
   useEffect(() => {
     if (detailQuery.data?.openedVocabularyIds) {
       setOpenedIds(detailQuery.data.openedVocabularyIds);
@@ -109,8 +120,13 @@ export function LessonStudyPage() {
   const vocabularies = detailQuery.data?.vocabularies ?? [];
   const currentVocab = vocabularies[currentIndex];
   const wordCount = detailQuery.data?.wordCount ?? vocabularies.length;
-  const openedCount = openedIds.length;
-  const acquisitionCompleted = wordCount > 0 && openedCount >= wordCount;
+  const openedCount = Math.min(
+    wordCount,
+    Math.max(openedIds.length, serverLessonProgress?.openedCount ?? 0),
+  );
+  const acquisitionCompleted =
+    Boolean(serverLessonProgress?.acquisitionCompleted) ||
+    (wordCount > 0 && openedCount >= wordCount);
   const remainingCards = Math.max(0, wordCount - openedCount);
 
   const posBadges = useMemo(() => {

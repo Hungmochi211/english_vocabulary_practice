@@ -128,7 +128,7 @@ export interface DueReviewItem {
 
 export interface DueReviewsResponse {
   dueCount: number;
-  leitnerDistribution: LeitnerDistribution;
+  leitnerDistribution?: LeitnerDistribution;
   items: DueReviewItem[];
 }
 

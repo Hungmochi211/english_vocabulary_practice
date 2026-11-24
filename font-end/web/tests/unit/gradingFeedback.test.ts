@@ -7,7 +7,7 @@ describe('T029 - gradingFeedback (002-backend-core grading_status_enum parity)',
     const cases: Array<{ status: GradingStatus; label: string; tone: string; points: number }> = [
       { status: 'exact', label: 'Chính xác', tone: 'green', points: 1 },
       { status: 'near_match', label: 'Gần đúng', tone: 'amber', points: 0.5 },
-      { status: 'phonetic_match', label: 'Đúng âm sai chữ', tone: 'blue', points: 0.25 },
+      { status: 'phonetic_match', label: 'Đúng âm sai chữ', tone: 'blue', points: 0 },
       { status: 'incorrect', label: 'Chưa chính xác', tone: 'rose', points: 0 },
     ];
 
@@ -45,10 +45,10 @@ describe('T029 - gradingFeedback (002-backend-core grading_status_enum parity)',
     expect(inVsOn.pointsAwarded).toBe(0);
   });
 
-  it('grades phonetically similar misspellings (e.g., phone vs fone) as phonetic_match (0.25 pt)', () => {
+  it('grades phonetically similar misspellings (e.g., phone vs fone) as phonetic_match (0.0 pt)', () => {
     const result = gradeLocalAnswer('phone', 'fone');
     expect(result.gradingStatus).toBe('phonetic_match');
-    expect(result.pointsAwarded).toBe(0.25);
+    expect(result.pointsAwarded).toBe(0);
   });
 
   it('grades empty or unrelated answers as incorrect (0.0 pt)', () => {

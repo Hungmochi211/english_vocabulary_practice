@@ -19,6 +19,7 @@ import {
   formatRankBadgeLabel,
   leaderboardAdapter,
 } from '@/services/adapters/leaderboard.adapter';
+import { localAvatarAdapter } from '@/services/adapters/avatar.adapter';
 import { useToast } from '@/components/common/CommonUi';
 import { LearnedWordsCard, StreakCard, XpCard } from '@/components/common/StreakCard';
 import { getInitials } from '@/utils/formatters';
@@ -88,13 +89,16 @@ function readAvatarFileAsDataUrl(file: File): Promise<string> {
 }
 
 export function ProfilePage() {
-  const { user, updateLocalUser, logout } = useAuth();
+  const { user, updateLocalUser, clearLocalSession } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
   const [fullName, setFullName] = useState(user?.fullName ?? '');
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatarUrl ?? null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(
+    () => localAvatarAdapter.get(user?.id) ?? user?.avatarUrl ?? null,
+  );
+  const [processingAvatar, setProcessingAvatar] = useState(false);
   const [targetLevel, setTargetLevel] = useState<CefrLevel>(user?.targetLevel ?? 'B2');
   const [emailReminderEnabled, setEmailReminderEnabled] = useState(
     user?.emailReminderEnabled ?? true,
@@ -130,13 +134,16 @@ export function ProfilePage() {
   useEffect(() => {
     if (meQuery.data && !dirtyRef.current) {
       setFullName(meQuery.data.fullName);
-      if (meQuery.data.avatarUrl) {
+      const localSaved = localAvatarAdapter.get(user?.id ?? meQuery.data.id);
+      if (localSaved) {
+        setAvatarUrl(localSaved);
+      } else if (meQuery.data.avatarUrl) {
         setAvatarUrl(meQuery.data.avatarUrl);
       }
       setTargetLevel(meQuery.data.targetLevel);
       setEmailReminderEnabled(meQuery.data.emailReminderEnabled);
     }
-  }, [meQuery.data]);
+  }, [meQuery.data, user?.id]);
 
   const leaderboardQuery = useQuery({
     queryKey: [
@@ -189,25 +196,26 @@ export function ProfilePage() {
     },
   });
 
-  const avatarMutation = useMutation({
-    mutationFn: (nextAvatarUrl: string | null) =>
-      usersApi.updateMe({ avatarUrl: nextAvatarUrl }),
-    onSuccess: (updated, nextAvatarUrl) => {
-      setAvatarUrl(updated.avatarUrl ?? null);
-      updateLocalUser({ avatarUrl: updated.avatarUrl ?? null });
+  const removeAvatarMutation = useMutation({
+    mutationFn: () => usersApi.updateMe({ avatarUrl: null }),
+    onSuccess: () => {
+      if (user?.id !== undefined) {
+        localAvatarAdapter.remove(user.id);
+      }
+      setAvatarUrl(null);
+      updateLocalUser({ avatarUrl: null });
       void queryClient.invalidateQueries({ queryKey: ['users', 'me'] });
       setProfileError(null);
-      showToast(
-        nextAvatarUrl ? 'Đã cập nhật ảnh đại diện thành công!' : 'Đã xóa ảnh đại diện.',
-        nextAvatarUrl ? 'success' : 'info',
-      );
+      showToast('Đã xóa ảnh đại diện.', 'info');
     },
     onError: (err) => {
       setProfileError(
-        err instanceof ApiError ? err.message : 'Không thể cập nhật ảnh đại diện lúc này.',
+        err instanceof ApiError ? err.message : 'Không thể xóa ảnh đại diện lúc này.',
       );
     },
   });
+
+  const isAvatarPending = processingAvatar || removeAvatarMutation.isPending;
 
   async function handleAvatarFileChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -223,28 +231,35 @@ export function ProfilePage() {
       return;
     }
 
+    setProcessingAvatar(true);
     try {
       dirtyRef.current = true;
       const dataUrl = await readAvatarFileAsDataUrl(file);
+      if (user?.id !== undefined) {
+        localAvatarAdapter.set(user.id, dataUrl);
+      }
       setAvatarUrl(dataUrl);
-      avatarMutation.mutate(dataUrl);
+      updateLocalUser({ avatarUrl: dataUrl });
+      setProfileError(null);
+      showToast('Đã cập nhật ảnh đại diện thành công!', 'success');
     } catch (err) {
       setProfileError(err instanceof Error ? err.message : 'Không thể xử lý ảnh đại diện.');
+    } finally {
+      setProcessingAvatar(false);
     }
   }
 
   function handleRemoveAvatar() {
     if (!avatarUrl && !user?.avatarUrl) return;
     dirtyRef.current = true;
-    setAvatarUrl(null);
-    avatarMutation.mutate(null);
+    removeAvatarMutation.mutate();
   }
 
   const changePasswordMutation = useMutation({
     mutationFn: () => authApi.changePassword({ currentPassword, newPassword }),
-    onSuccess: async () => {
+    onSuccess: () => {
       showToast('Đổi mật khẩu thành công. Vui lòng đăng nhập lại.', 'success');
-      await logout();
+      clearLocalSession();
       navigate('/login?reason=password_changed', { replace: true });
     },
     onError: (err) => {
@@ -267,8 +282,12 @@ export function ProfilePage() {
   function handleChangePassword(e: FormEvent) {
     e.preventDefault();
     setPasswordError(null);
-    if (newPassword.length < 8) {
-      setPasswordError('Mật khẩu mới phải có ít nhất 8 ký tự.');
+    if (newPassword.length < 8 || newPassword.length > 72) {
+      setPasswordError('Mật khẩu mới phải từ 8 đến 72 ký tự.');
+      return;
+    }
+    if (!/[A-Za-z]/.test(newPassword) || !/\d/.test(newPassword)) {
+      setPasswordError('Mật khẩu mới phải chứa ít nhất 1 chữ cái và 1 chữ số.');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -373,16 +392,16 @@ export function ProfilePage() {
                 />
                 <button
                   type="button"
-                  disabled={avatarMutation.isPending}
+                  disabled={isAvatarPending}
                   onClick={() => fileInputRef.current?.click()}
                   className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-800 shadow-2xs transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
                 >
                   <Camera className="h-4 w-4 text-slate-700" />
-                  <span>Tải ảnh lên</span>
+                  <span>{processingAvatar ? 'Đang xử lý...' : 'Tải ảnh lên'}</span>
                 </button>
                 <button
                   type="button"
-                  disabled={avatarMutation.isPending || !avatarUrl}
+                  disabled={isAvatarPending || !avatarUrl}
                   onClick={handleRemoveAvatar}
                   className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3.5 py-2 text-xs font-bold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-45"
                 >

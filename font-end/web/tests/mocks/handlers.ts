@@ -472,7 +472,7 @@ function gradeBackendAnswer(
   if (target.length >= 3 && phoneticKey(normalized) === phoneticKey(target)) {
     return {
       gradingStatus: 'phonetic_match',
-      pointsAwarded: 0.25,
+      pointsAwarded: 0,
       feedbackMessage: `Đúng âm nhưng sai mặt chữ. Cách viết đúng là "${vocab.word}".`,
     };
   }
@@ -701,6 +701,20 @@ export const handlers = [
 
   http.patch(`${API_BASE}/users/me`, async ({ request }) => {
     const patch = (await request.json()) as Partial<UserProfile>;
+    if (typeof patch.avatarUrl === 'string' && patch.avatarUrl.length > 500) {
+      return HttpResponse.json(
+        {
+          success: false,
+          data: null,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'avatarUrl không được vượt quá 500 ký tự (hãy dùng POST /users/me/avatar để tải ảnh).',
+            details: null,
+          },
+        },
+        { status: 400 },
+      );
+    }
     mockDb.user = {
       ...mockDb.user,
       ...(patch.fullName !== undefined ? { fullName: patch.fullName } : {}),
@@ -938,7 +952,7 @@ export const handlers = [
           success: false,
           data: null,
           error: {
-            code: 'ACQUISITION_INCOMPLETE',
+            code: 'ACQUISITION_REQUIRED',
             message: 'Vui lòng mở đủ 100% thẻ từ ở Bước 1 trước khi làm Thực hành Bước 2.',
             details: null,
           },

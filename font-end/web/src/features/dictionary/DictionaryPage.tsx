@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -48,6 +48,7 @@ export function DictionaryPage() {
 
   const [queryText, setQueryText] = useState(initialQuery);
   const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
+  const lastUrlQRef = useRef(initialQuery);
   const [selectedLevel, setSelectedLevel] = useState<CefrLevel | ''>('');
   const [selectedPos, setSelectedPos] = useState('');
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
@@ -60,7 +61,8 @@ export function DictionaryPage() {
 
   useEffect(() => {
     const urlQ = searchParams.get('q') ?? '';
-    if (urlQ !== queryText) {
+    if (urlQ !== lastUrlQRef.current) {
+      lastUrlQRef.current = urlQ;
       setQueryText(urlQ);
       setDebouncedQuery(urlQ);
     }
@@ -87,7 +89,7 @@ export function DictionaryPage() {
 
   const baselineQuery = useQuery({
     queryKey: ['vocabularies', 'baseline'],
-    queryFn: () => vocabularyApi.searchVocabularies({ limit: 100 }),
+    queryFn: () => vocabularyApi.searchVocabularies({ limit: 50 }),
     staleTime: 5 * 60_000,
   });
 
@@ -120,12 +122,51 @@ export function DictionaryPage() {
   const displayedItems = useMemo<VocabularyItem[]>(() => {
     const rawItems = searchQuery.data?.items ?? [];
     if (!onlySaved) return rawItems;
-    return rawItems.filter(
-      (item) =>
-        savedIdSet.has(item.id) &&
-        matchesVietnameseOrEnglish(item.word, item.vietnameseMeaning, debouncedQuery),
-    );
-  }, [debouncedQuery, onlySaved, savedIdSet, searchQuery.data?.items]);
+
+    const knownById = new Map<number, VocabularyItem>();
+    for (const item of baselineQuery.data?.items ?? []) knownById.set(item.id, item);
+    for (const item of rawItems) knownById.set(item.id, item);
+
+    const savedAsVocab: VocabularyItem[] = savedRecords.map((rec) => {
+      const enriched = knownById.get(rec.vocabularyId);
+      if (enriched) return enriched;
+      return {
+        id: rec.vocabularyId,
+        word: rec.word,
+        cefrLevel: rec.cefrLevel,
+        partOfSpeech: rec.partOfSpeech,
+        phonetic: rec.phonetic,
+        vietnameseMeaning: rec.vietnameseMeaning,
+        exampleEn: '',
+        exampleVi: '',
+        topicId: 0,
+        audioUrl: null,
+      };
+    });
+
+    return savedAsVocab.filter((item) => {
+      if (selectedLevel && item.cefrLevel !== selectedLevel) return false;
+      if (selectedPos) {
+        const posList = item.partOfSpeech
+          .toLowerCase()
+          .replace(/\./g, '')
+          .split(',')
+          .map((p) => p.trim());
+        if (!posList.includes(selectedPos.toLowerCase())) return false;
+      }
+      if (selectedTopicId && item.topicId !== selectedTopicId) return false;
+      return matchesVietnameseOrEnglish(item.word, item.vietnameseMeaning, debouncedQuery);
+    });
+  }, [
+    baselineQuery.data?.items,
+    debouncedQuery,
+    onlySaved,
+    savedRecords,
+    searchQuery.data?.items,
+    selectedLevel,
+    selectedPos,
+    selectedTopicId,
+  ]);
 
   const selectedVocab = useMemo<VocabularyItem | null>(() => {
     if (displayedItems.length === 0) return null;
@@ -151,7 +192,9 @@ export function DictionaryPage() {
 
   function handleQueryChange(nextVal: string) {
     setQueryText(nextVal);
-    if (nextVal.trim()) {
+    const trimmed = nextVal.trim();
+    lastUrlQRef.current = trimmed ? nextVal : '';
+    if (trimmed) {
       setSearchParams({ q: nextVal }, { replace: true });
     } else {
       setSearchParams({}, { replace: true });

@@ -1,0 +1,10 @@
+# Environment variables & secrets (Constitution Principle V)
+.env
+.env.*
+!.env.example
+
+# Dependencies & build outputs
+node_modules/
+dist/
+coverage/
+*.log

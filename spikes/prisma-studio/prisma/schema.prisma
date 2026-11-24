@@ -22,15 +22,17 @@ model lesson_vocabularies {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model lessons {
-  id                  Int                   @id @default(autoincrement())
-  topic_id            Int
-  cefr_level          cefr_level_enum
-  title               String                @db.VarChar(150)
-  order_index         Int
-  word_count          Int                   @default(0)
-  created_at          DateTime              @default(now()) @db.Timestamptz(6)
-  lesson_vocabularies lesson_vocabularies[]
-  topics              topics                @relation(fields: [topic_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                   Int                    @id @default(autoincrement())
+  topic_id             Int
+  cefr_level           cefr_level_enum
+  title                String                 @db.VarChar(150)
+  order_index          Int
+  word_count           Int                    @default(0)
+  created_at           DateTime               @default(now()) @db.Timestamptz(6)
+  lesson_vocabularies  lesson_vocabularies[]
+  topics               topics                 @relation(fields: [topic_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  quiz_attempts        quiz_attempts[]
+  user_lesson_progress user_lesson_progress[]
 
   @@index([cefr_level, topic_id], map: "idx_lesson_level_topic")
 }
@@ -55,24 +57,203 @@ model topics {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model vocabularies {
-  id                  Int                   @id @default(autoincrement())
-  word                String                @db.VarChar(100)
-  cefr_level          cefr_level_enum
-  part_of_speech      String                @db.VarChar(30)
-  sense_number        Int                   @default(1) @db.SmallInt
-  phonetic            String                @db.VarChar(100)
-  vietnamese_meaning  String                @db.VarChar(255)
-  example_en          String
-  example_vi          String
-  topic_id            Int
-  audio_url           String?               @db.VarChar(500)
-  created_at          DateTime              @default(now()) @db.Timestamptz(6)
-  updated_at          DateTime              @default(now()) @db.Timestamptz(6)
-  lesson_vocabularies lesson_vocabularies[]
-  topics              topics                @relation(fields: [topic_id], references: [id], onUpdate: NoAction)
+  id                   Int                    @id @default(autoincrement())
+  word                 String                 @db.VarChar(100)
+  cefr_level           cefr_level_enum
+  part_of_speech       String                 @db.VarChar(30)
+  sense_number         Int                    @default(1) @db.SmallInt
+  phonetic             String                 @db.VarChar(100)
+  vietnamese_meaning   String                 @db.VarChar(255)
+  example_en           String
+  example_vi           String
+  topic_id             Int
+  audio_url            String?                @db.VarChar(500)
+  created_at           DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime               @default(now()) @db.Timestamptz(6)
+  lesson_vocabularies  lesson_vocabularies[]
+  quiz_attempt_answers quiz_attempt_answers[]
+  user_sm2_reviews     user_sm2_reviews[]
+  topics               topics                 @relation(fields: [topic_id], references: [id], onUpdate: NoAction)
 
   @@unique([word, cefr_level, part_of_speech, sense_number], map: "unique_word_level_pos_sense")
   @@index([cefr_level, part_of_speech, topic_id], map: "idx_vocab_distractor")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model audit_logs {
+  id            Int      @id @default(autoincrement())
+  actor_user_id Int?
+  action        String   @db.VarChar(80)
+  target_type   String?  @db.VarChar(50)
+  target_id     String?  @db.VarChar(100)
+  status        String   @db.VarChar(20)
+  metadata      Json?
+  ip_address    String?  @db.VarChar(45)
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  users         users?   @relation(fields: [actor_user_id], references: [id], onUpdate: NoAction)
+
+  @@index([actor_user_id, created_at(sort: Desc)], map: "idx_audit_actor_created")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model daily_study_logs {
+  id                         Int       @id @default(autoincrement())
+  user_id                    Int
+  study_date                 DateTime  @db.Date
+  words_learned              Int       @default(0)
+  words_reviewed             Int       @default(0)
+  lesson_practices_completed Int       @default(0)
+  sm2_sessions_completed     Int       @default(0)
+  streak_qualified           Boolean   @default(false)
+  reminder_sent              Boolean   @default(false)
+  reminder_status            String?   @db.VarChar(20)
+  reminder_attempts          Int       @default(0) @db.SmallInt
+  reminder_sent_at           DateTime? @db.Timestamptz(6)
+  created_at                 DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at                 DateTime  @default(now()) @db.Timestamptz(6)
+  users                      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, study_date], map: "uq_daily_study_log")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model quiz_attempt_answers {
+  id               Int                 @id @default(autoincrement())
+  attempt_id       Int
+  user_id          Int
+  vocabulary_id    Int
+  practice_mode    practice_mode_enum
+  user_answer      String?
+  grading_status   grading_status_enum
+  score            Decimal             @db.Decimal(3, 2)
+  damerau_distance Int?
+  soundex_matched  Boolean?
+  quality_rating   Int                 @db.SmallInt
+  response_time_ms Int
+  created_at       DateTime            @default(now()) @db.Timestamptz(6)
+  quiz_attempts    quiz_attempts       @relation(fields: [attempt_id, user_id], references: [id, user_id], onDelete: Cascade, onUpdate: NoAction, map: "fk_answer_attempt_owner")
+  users            users               @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  vocabularies     vocabularies        @relation(fields: [vocabulary_id], references: [id], onUpdate: NoAction)
+
+  @@unique([attempt_id, vocabulary_id], map: "uq_attempt_answer_vocab")
+  @@index([user_id, vocabulary_id, created_at(sort: Desc)], map: "idx_attempt_answers_user_vocab")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model quiz_attempts {
+  id                   Int                      @id @default(autoincrement())
+  user_id              Int
+  lesson_id            Int?
+  attempt_type         quiz_attempt_type_enum
+  status               quiz_attempt_status_enum @default(in_progress)
+  questions_snapshot   Json
+  due_count_snapshot   Int?
+  total_questions      Int
+  total_score          Decimal                  @default(0.00) @db.Decimal(6, 2)
+  score_percentage     Decimal                  @default(0.00) @db.Decimal(5, 2)
+  started_at           DateTime                 @default(now()) @db.Timestamptz(6)
+  submitted_at         DateTime?                @db.Timestamptz(6)
+  quiz_attempt_answers quiz_attempt_answers[]
+  lessons              lessons?                 @relation(fields: [lesson_id], references: [id], onUpdate: NoAction)
+  users                users                    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([id, user_id], map: "uq_quiz_attempts_id_user")
+  @@index([user_id, lesson_id, status], map: "idx_quiz_attempts_user_lesson")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model refresh_sessions {
+  id                Int       @id @default(autoincrement())
+  user_id           Int
+  session_family_id String    @db.Uuid
+  token_hash        String    @unique @db.Char(64)
+  replaced_by_hash  String?   @db.Char(64)
+  is_revoked        Boolean   @default(false)
+  revoked_at        DateTime? @db.Timestamptz(6)
+  user_agent        String?   @db.VarChar(255)
+  ip_address        String?   @db.VarChar(45)
+  expires_at        DateTime  @db.Timestamptz(6)
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  users             users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([expires_at], map: "idx_refresh_expires_at")
+  @@index([user_id, session_family_id], map: "idx_refresh_user_family")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model user_lesson_progress {
+  id                    Int       @id @default(autoincrement())
+  user_id               Int
+  lesson_id             Int
+  opened_vocabulary_ids Int[]     @default([])
+  acquisition_completed Boolean   @default(false)
+  is_completed          Boolean   @default(false)
+  best_score            Decimal   @default(0.00) @db.Decimal(5, 2)
+  attempts_count        Int       @default(0)
+  first_completed_at    DateTime? @db.Timestamptz(6)
+  updated_at            DateTime  @default(now()) @db.Timestamptz(6)
+  lessons               lessons   @relation(fields: [lesson_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users                 users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, lesson_id], map: "uq_user_lesson_progress")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model user_sm2_reviews {
+  id                  Int          @id @default(autoincrement())
+  user_id             Int
+  vocabulary_id       Int
+  easiness_factor     Decimal      @default(2.50) @db.Decimal(4, 2)
+  repetitions         Int          @default(0)
+  interval_days       Int          @default(0)
+  next_review_date    DateTime     @db.Date
+  leitner_box         Int          @default(1) @db.SmallInt
+  last_quality_rating Int?         @db.SmallInt
+  last_reviewed_at    DateTime?    @db.Timestamptz(6)
+  created_at          DateTime     @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime     @default(now()) @db.Timestamptz(6)
+  users               users        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  vocabularies        vocabularies @relation(fields: [vocabulary_id], references: [id], onUpdate: NoAction)
+
+  @@unique([user_id, vocabulary_id], map: "uq_sm2_user_vocab")
+  @@index([user_id, next_review_date, leitner_box, id], map: "idx_sm2_due")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model user_streaks {
+  id              Int       @id @default(autoincrement())
+  user_id         Int       @unique
+  current_streak  Int       @default(0)
+  longest_streak  Int       @default(0)
+  last_study_date DateTime? @db.Date
+  updated_at      DateTime  @default(now()) @db.Timestamptz(6)
+  users           users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model users {
+  id                     Int                    @id @default(autoincrement())
+  email                  String                 @unique @db.VarChar(255)
+  password_hash          String?                @db.VarChar(255)
+  full_name              String                 @db.VarChar(100)
+  avatar_url             String?                @db.VarChar(500)
+  target_level           cefr_level_enum        @default(B1)
+  role                   user_role_enum         @default(learner)
+  auth_provider          auth_provider_enum     @default(local)
+  google_id              String?                @unique @db.VarChar(100)
+  email_reminder_enabled Boolean                @default(true)
+  token_version          Int                    @default(1)
+  is_active              Boolean                @default(true)
+  created_at             DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime               @default(now()) @db.Timestamptz(6)
+  audit_logs             audit_logs[]
+  daily_study_logs       daily_study_logs[]
+  quiz_attempt_answers   quiz_attempt_answers[]
+  quiz_attempts          quiz_attempts[]
+  refresh_sessions       refresh_sessions[]
+  user_lesson_progress   user_lesson_progress[]
+  user_sm2_reviews       user_sm2_reviews[]
+  user_streaks           user_streaks?
 }
 
 enum cefr_level_enum {
@@ -80,4 +261,38 @@ enum cefr_level_enum {
   A2
   B1
   B2
+}
+
+enum auth_provider_enum {
+  local
+  google
+}
+
+enum grading_status_enum {
+  exact
+  near_match
+  phonetic_match
+  incorrect
+}
+
+enum practice_mode_enum {
+  multiple_choice
+  typing
+  dictation
+}
+
+enum quiz_attempt_status_enum {
+  in_progress
+  submitted
+}
+
+enum quiz_attempt_type_enum {
+  lesson_practice
+  sm2_review
+  mixed_quiz
+}
+
+enum user_role_enum {
+  learner
+  admin
 }

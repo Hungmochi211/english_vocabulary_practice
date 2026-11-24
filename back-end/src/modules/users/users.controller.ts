@@ -10,6 +10,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { Request } from 'express';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import {
   UpdateProfileDto,
@@ -24,6 +25,8 @@ import {
   AuthenticatedUser,
 } from '../../common/decorators/current-user.decorator';
 
+@ApiTags('Users')
+@ApiBearerAuth()
 @Controller('users')
 @UseGuards(JwtAuthGuard)
 export class UsersController {
@@ -43,6 +46,8 @@ export class UsersController {
   }
 }
 
+@ApiTags('Admin')
+@ApiBearerAuth()
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('admin')

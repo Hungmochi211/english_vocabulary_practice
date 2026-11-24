@@ -1,4 +1,5 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { StreakService } from './streak.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -8,6 +9,8 @@ import {
   AuthenticatedUser,
 } from '../../common/decorators/current-user.decorator';
 
+@ApiTags('Stats')
+@ApiBearerAuth()
 @Controller('stats')
 @UseGuards(JwtAuthGuard)
 export class StatsController {
@@ -19,6 +22,8 @@ export class StatsController {
   }
 }
 
+@ApiTags('Admin')
+@ApiBearerAuth()
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('admin')

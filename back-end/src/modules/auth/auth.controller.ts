@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Request } from 'express';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import {
   RegisterDto,
@@ -23,6 +24,7 @@ import {
   AuthenticatedUser,
 } from '../../common/decorators/current-user.decorator';
 
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -51,6 +53,7 @@ export class AuthController {
     return this.authService.refresh(dto, req.ip, req.headers['user-agent']);
   }
 
+  @ApiBearerAuth()
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
@@ -62,6 +65,7 @@ export class AuthController {
     return this.authService.logout(user.id, dto, req.ip);
   }
 
+  @ApiBearerAuth()
   @Post('change-password')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)

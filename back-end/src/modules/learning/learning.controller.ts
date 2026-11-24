@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { LearningService } from './learning.service';
 import { QuizGradingService } from './quiz-grading.service';
 import { LessonsQueryDto, MixedQuizStartDto } from './dto/learning.dto';
@@ -20,6 +21,8 @@ import {
   AuthenticatedUser,
 } from '../../common/decorators/current-user.decorator';
 
+@ApiTags('Learning')
+@ApiBearerAuth()
 @Controller('learning')
 @UseGuards(JwtAuthGuard)
 export class LearningController {

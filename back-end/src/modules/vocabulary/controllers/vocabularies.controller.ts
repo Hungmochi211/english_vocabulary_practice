@@ -1,7 +1,9 @@
 import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { VocabularyService } from '../services/vocabulary.service';
 import { SearchVocabDto } from '../dto/search-vocab.dto';
 
+@ApiTags('Vocabularies (001)')
 @Controller('vocabularies')
 export class VocabulariesController {
   constructor(private readonly vocabularyService: VocabularyService) {}

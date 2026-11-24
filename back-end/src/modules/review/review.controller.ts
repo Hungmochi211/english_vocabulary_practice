@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ReviewService } from './review.service';
 import { ReviewsDueQueryDto, StartReviewSessionDto } from './dto/review.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -16,6 +17,8 @@ import {
   AuthenticatedUser,
 } from '../../common/decorators/current-user.decorator';
 
+@ApiTags('Reviews')
+@ApiBearerAuth()
 @Controller('reviews')
 @UseGuards(JwtAuthGuard)
 export class ReviewController {

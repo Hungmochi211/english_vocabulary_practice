@@ -1,7 +1,9 @@
 import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { LessonService } from '../services/lesson.service';
 import { QueryLessonsDto } from '../dto/query-lessons.dto';
 
+@ApiTags('Lessons (001)')
 @Controller('lessons')
 export class LessonsController {
   constructor(private readonly lessonService: LessonService) {}

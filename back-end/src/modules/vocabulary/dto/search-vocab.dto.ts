@@ -9,8 +9,10 @@ import {
   Max,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class SearchVocabDto {
+  @ApiProperty({ example: 'abandon', minLength: 1, maxLength: 100 })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString({ message: 'q must be a string' })
   @IsNotEmpty({ message: 'q should not be empty' })
@@ -18,6 +20,7 @@ export class SearchVocabDto {
   @MaxLength(100, { message: 'q must be shorter than or equal to 100 characters' })
   q: string;
 
+  @ApiPropertyOptional({ example: 20, minimum: 1, maximum: 50, default: 20 })
   @IsOptional()
   @Type(() => Number)
   @IsInt({ message: 'limit must be an integer number' })

@@ -33,6 +33,52 @@ services:
       timeout: 5s
       retries: 5
 
+  backend:
+    build:
+      context: ./back-end
+      dockerfile: Dockerfile
+    container_name: vocab-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_DATABASE: english_vocab_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-team_dev_jwt_access_secret_key_change_in_prod}
+      JWT_ACCESS_EXPIRES_IN: 900
+      JWT_REFRESH_EXPIRES_DAYS: 7
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      STRICT_UNLOCK_MODE: ${STRICT_UNLOCK_MODE:-true}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./tools:/tools:ro
+
+  frontend:
+    build:
+      context: ./font-end/web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:3000/api/v1
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
+        VITE_ENABLE_MSW: "false"
+    container_name: vocab-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
 volumes:
   vocab_pgdata:
   vocab_redisdata:

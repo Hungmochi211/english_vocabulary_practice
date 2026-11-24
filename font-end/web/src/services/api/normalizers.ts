@@ -28,8 +28,27 @@ function isRecord(value: unknown): value is AnyRecord {
 function maskWordInSentence(sentence: string, word: string): string {
   const cleanWord = word.trim();
   if (!sentence.trim() || !cleanWord) return sentence;
-  const escaped = cleanWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return sentence.replace(new RegExp(`\\b${escaped}\\b`, 'gi'), '_____');
+
+  const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const variants = new Set<string>([
+    `${escapeRegex(cleanWord)}(?:s|es|ed|ing|er|est|ly|d|n)?`,
+  ]);
+
+  if (!cleanWord.includes(' ') && cleanWord.length >= 3) {
+    const lower = cleanWord.toLowerCase();
+    if (/[^aeiou]y$/.test(lower)) {
+      const stem = escapeRegex(cleanWord.slice(0, -1));
+      variants.add(`${stem}(?:ies|ied|ying|ier|iest)`);
+    } else if (lower.endsWith('e')) {
+      const stem = escapeRegex(cleanWord.slice(0, -1));
+      variants.add(`${stem}(?:ing|ed|es|er|est|en|s|d|r)`);
+    } else if (/[bcdfghjklmnpqrstvwxyz]$/.test(lower)) {
+      const last = escapeRegex(cleanWord.slice(-1));
+      variants.add(`${escapeRegex(cleanWord)}${last}(?:ed|ing|er|est|en)`);
+    }
+  }
+
+  return sentence.replace(new RegExp(`\\b(?:${Array.from(variants).join('|')})\\b`, 'gi'), '_____');
 }
 
 export function normalizeAuthSession(raw: AuthSession & { expiresIn?: number }): AuthSession {

@@ -33,6 +33,33 @@ export interface GeneratedQuestionSnapshot {
   correctAnswer: string;
 }
 
+export function maskWordInExample(sentence: string, word: string): string {
+  const cleanWord = word.trim();
+  if (!sentence.trim() || !cleanWord) return sentence;
+
+  const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const variants = new Set<string>([
+    `${escapeRegex(cleanWord)}(?:s|es|ed|ing|er|est|ly|d|n)?`,
+  ]);
+
+  if (!cleanWord.includes(' ') && cleanWord.length >= 3) {
+    const lower = cleanWord.toLowerCase();
+    if (/[^aeiou]y$/.test(lower)) {
+      const stem = escapeRegex(cleanWord.slice(0, -1));
+      variants.add(`${stem}(?:ies|ied|ying|ier|iest)`);
+    } else if (lower.endsWith('e')) {
+      const stem = escapeRegex(cleanWord.slice(0, -1));
+      variants.add(`${stem}(?:ing|ed|es|er|est|en|s|d|r)`);
+    } else if (/[bcdfghjklmnpqrstvwxyz]$/.test(lower)) {
+      const last = escapeRegex(cleanWord.slice(-1));
+      variants.add(`${escapeRegex(cleanWord)}${last}(?:ed|ing|er|est|en)`);
+    }
+  }
+
+  const pattern = new RegExp(`\\b(?:${Array.from(variants).join('|')})\\b`, 'gi');
+  return sentence.replace(pattern, '_____');
+}
+
 export function selectDistractorsFromCandidates(
   target: VocabCandidate,
   candidates: VocabCandidate[],
@@ -172,9 +199,7 @@ export class DistractorService {
         }
       }
 
-      const maskedExample = v.exampleEn
-        ? v.exampleEn.replace(new RegExp(`\\b${v.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi'), '_____')
-        : '';
+      const maskedExample = v.exampleEn ? maskWordInExample(v.exampleEn, v.word) : '';
 
       const prompt =
         desiredMode === 'multiple_choice'

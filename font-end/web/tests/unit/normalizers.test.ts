@@ -65,12 +65,12 @@ describe('Backend 001/002 -> Frontend normalizers', () => {
         },
         {
           vocabularyId: 11,
-          word: 'protect',
-          partOfSpeech: 'v.',
+          word: 'brown',
+          partOfSpeech: 'adj.',
           practiceMode: 'typing',
-          prompt: 'Gõ từ tiếng Anh có nghĩa "bảo vệ" (v.)',
-          vietnameseMeaning: 'bảo vệ',
-          exampleEn: 'We protect nature.',
+          prompt: 'Gõ từ tiếng Anh có nghĩa "có màu nâu" (adj.)',
+          vietnameseMeaning: 'có màu nâu',
+          exampleEn: 'The browns and greens in this painting give it a nice woodsy feel.',
           audioUrl: null,
           options: null,
         },
@@ -80,8 +80,10 @@ describe('Backend 001/002 -> Frontend normalizers', () => {
     expect(started.attemptType).toBe('lesson_practice');
     expect(started.questions[0].prompt.word).toBe('abandon');
     expect(started.questions[0].prompt.options).toHaveLength(4);
-    expect(started.questions[1].prompt.vietnameseMeaning).toBe('bảo vệ');
-    expect(started.questions[1].prompt.clozeExampleEn).toBe('We _____ nature.');
+    expect(started.questions[1].prompt.vietnameseMeaning).toBe('có màu nâu');
+    expect(started.questions[1].prompt.clozeExampleEn).toBe(
+      'The _____ and greens in this painting give it a nice woodsy feel.',
+    );
 
     const submitted = normalizeQuizSubmitResult({
       attemptId: 99,

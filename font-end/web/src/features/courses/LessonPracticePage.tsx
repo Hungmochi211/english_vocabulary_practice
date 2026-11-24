@@ -348,19 +348,67 @@ export function LessonPracticePage() {
           </div>
 
           <div className="mt-5 space-y-3">
-            {currentQuestion.prompt.vietnameseMeaning && (
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Nghĩa tiếng Việt</p>
-                <p className="mt-1 font-heading text-xl font-extrabold text-slate-900">
-                  {currentQuestion.prompt.vietnameseMeaning}
+            {currentQuestion.practiceMode === 'multiple_choice' && currentQuestion.prompt.word ? (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 text-center">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                  Chọn nghĩa tiếng Việt đúng của từ
                 </p>
+                <p className="mt-1 font-heading text-3xl font-extrabold text-slate-900">
+                  {currentQuestion.prompt.word}
+                </p>
+                {currentQuestion.prompt.phonetic && (
+                  <p className="mt-1 font-mono text-sm text-slate-500">
+                    {currentQuestion.prompt.phonetic}
+                  </p>
+                )}
+                <div className="mt-3 flex justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void play({
+                        word: currentQuestion.prompt.word ?? '',
+                        audioUrl: currentQuestion.prompt.audioUrl,
+                        rate: 1,
+                      })
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700"
+                  >
+                    <Volume2 className="h-3.5 w-3.5" />
+                    <span>Nghe 1.0×</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void play({
+                        word: currentQuestion.prompt.word ?? '',
+                        audioUrl: currentQuestion.prompt.audioUrl,
+                        rate: 0.7,
+                      })
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700"
+                  >
+                    <Volume2 className="h-3.5 w-3.5" />
+                    <span>Chậm 0.7×</span>
+                  </button>
+                </div>
               </div>
-            )}
+            ) : (
+              <>
+                {currentQuestion.prompt.vietnameseMeaning && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Nghĩa tiếng Việt</p>
+                    <p className="mt-1 font-heading text-xl font-extrabold text-slate-900">
+                      {currentQuestion.prompt.vietnameseMeaning}
+                    </p>
+                  </div>
+                )}
 
-            {currentQuestion.prompt.clozeExampleEn && (
-              <p className="rounded-xl bg-slate-50 p-3.5 text-sm text-slate-700">
-                {currentQuestion.prompt.clozeExampleEn}
-              </p>
+                {currentQuestion.prompt.clozeExampleEn && (
+                  <p className="rounded-xl bg-slate-50 p-3.5 text-sm text-slate-700">
+                    {currentQuestion.prompt.clozeExampleEn}
+                  </p>
+                )}
+              </>
             )}
 
             {currentQuestion.practiceMode === 'dictation' && (

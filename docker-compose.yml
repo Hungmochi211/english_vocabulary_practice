@@ -18,5 +18,21 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: vocab-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - vocab_redisdata:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   vocab_pgdata:
+  vocab_redisdata:

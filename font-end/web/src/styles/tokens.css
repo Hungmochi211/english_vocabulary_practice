@@ -56,3 +56,211 @@ body {
 .font-heading {
   font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
 }
+
+/* Topbar Account Popover Menu (adapted from Lucian UX/UI Prompt #408 for LexiTag) */
+.acct-menu {
+  --acct-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --acct-spring: cubic-bezier(0.34, 1.45, 0.64, 1);
+  --acct-accent: #4f46e5;
+  --acct-mint: #10b981;
+  --acct-danger: #e11d48;
+  --acct-line: rgba(15, 23, 42, 0.08);
+  --acct-shadow: rgba(15, 23, 42, 0.12);
+  --acct-shadow-strong: rgba(30, 27, 75, 0.22);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.acct-menu-av {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 9999px;
+  background: var(--btn-primary-bg);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 0 0 0 transparent;
+  transition: box-shadow 0.28s ease, transform 0.45s var(--acct-spring);
+}
+
+.acct-menu-av:hover {
+  transform: scale(1.05);
+}
+
+.acct-menu-av:active {
+  transform: scale(0.94);
+  transition-duration: 0.25s, 0.1s;
+}
+
+.acct-menu-av[aria-expanded='true'] {
+  border-color: transparent;
+  box-shadow: 0 0 0 2.5px #ffffff, 0 0 0 4.5px var(--acct-accent);
+}
+
+.acct-menu-av:focus-visible {
+  outline: 2px solid var(--acct-accent);
+  outline-offset: 3px;
+}
+
+.acct-menu-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 11px;
+  height: 11px;
+  border-radius: 9999px;
+  background: var(--acct-mint);
+  box-shadow: 0 0 0 2.5px #ffffff;
+  pointer-events: none;
+}
+
+.acct-menu-panel {
+  position: absolute;
+  right: 0;
+  top: 52px;
+  z-index: 50;
+  width: 244px;
+  padding: 6px;
+  border-radius: 16px;
+  background: var(--bg-surface);
+  box-shadow:
+    inset 0 0 0 1px var(--acct-line),
+    0 22px 44px -18px var(--acct-shadow-strong),
+    0 4px 12px -6px var(--acct-shadow);
+  transform-origin: calc(100% - 20px) -26px;
+  transform: scale(0.18);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform 0.26s var(--acct-ease),
+    opacity 0.18s ease,
+    visibility 0s 0.26s;
+}
+
+.acct-menu-panel::before {
+  content: '';
+  position: absolute;
+  right: 15px;
+  top: -5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--bg-surface);
+  box-shadow: -1px -1px 0 0 var(--acct-line);
+  transform: rotate(45deg);
+}
+
+.acct-menu.is-open .acct-menu-panel {
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition:
+    transform 0.52s var(--acct-spring),
+    opacity 0.15s ease,
+    visibility 0s;
+}
+
+.acct-menu-panel > * {
+  position: relative;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.15s ease, transform 0.35s var(--acct-spring);
+}
+
+.acct-menu.is-open .acct-menu-panel > * {
+  opacity: 1;
+  transform: none;
+  transition-delay: calc(60ms + var(--i, 0) * 32ms);
+}
+
+.acct-menu-hd {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px 10px;
+}
+
+.acct-menu-hd b {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-main);
+}
+
+.acct-menu-email {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.acct-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-title);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.acct-menu-item:hover,
+.acct-menu-item:focus-visible {
+  background: var(--bg-surface-subtle);
+  outline: none;
+}
+
+.acct-menu-icon {
+  width: 17px;
+  height: 17px;
+  flex: none;
+  color: var(--text-muted);
+  stroke-width: 1.75;
+}
+
+.acct-menu-item.is-out {
+  color: var(--acct-danger);
+}
+
+.acct-menu-item.is-out .acct-menu-icon {
+  color: var(--acct-danger);
+}
+
+.acct-menu-item.is-out:hover,
+.acct-menu-item.is-out:focus-visible {
+  background: var(--soft-rose-bg);
+}
+
+.acct-menu-hr {
+  height: 1px;
+  margin: 5px 4px;
+  background: var(--acct-line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .acct-menu,
+  .acct-menu *,
+  .acct-menu *::before,
+  .acct-menu *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

@@ -23,6 +23,7 @@ import { formatXp, getInitials } from '@/utils/formatters';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { LogoutModal } from '@/features/auth/LogoutModal';
 import { NotificationBell } from '@/components/layout/NotificationBell';
+import { AccountMenu } from '@/components/layout/AccountMenu';
 import { FloatingSupportWidget } from '@/components/support/FloatingSupportWidget';
 import type { StatsOverview } from '@/types/models';
 
@@ -273,18 +274,7 @@ export function AppShell() {
 
             <NotificationBell />
 
-            <button
-              type="button"
-              onClick={() => navigate('/profile')}
-              aria-label="Mở trang cá nhân"
-              className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-800 text-xs font-bold text-white"
-            >
-              {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt={displayName} className="h-full w-full object-cover" />
-              ) : (
-                <span>{initials}</span>
-              )}
-            </button>
+            <AccountMenu onRequestLogout={() => setLogoutOpen(true)} />
           </div>
         </header>
 

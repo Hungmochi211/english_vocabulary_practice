@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -11,6 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '@/app/AuthProvider';
+import { OPEN_SUPPORT_WIDGET_EVENT } from '@/components/layout/AccountMenu';
 import { supportAdapter } from '@/services/adapters/support.adapter';
 import { notificationsAdapter } from '@/services/adapters/notifications.adapter';
 import { useToast } from '@/components/common/CommonUi';
@@ -24,6 +25,15 @@ export function FloatingSupportWidget() {
 
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<SupportView>('menu');
+
+  useEffect(() => {
+    const handleExternalOpen = () => {
+      setOpen(true);
+      setView('menu');
+    };
+    window.addEventListener(OPEN_SUPPORT_WIDGET_EVENT, handleExternalOpen);
+    return () => window.removeEventListener(OPEN_SUPPORT_WIDGET_EVENT, handleExternalOpen);
+  }, []);
 
   const [messages, setMessages] = useState<SupportMessage[]>(() => supportAdapter.listMessages());
   const [chatInput, setChatInput] = useState('');

@@ -378,4 +378,26 @@ describe('Frontend/Web Audit Regression Suite (001/002 Contract & Security Fixes
     expect(await screen.findByText(/Trắc nghiệm 4 đáp án/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /peaceful/i })).toBeInTheDocument();
   });
+
+  it('opens top-right AccountMenu popover, triggers Support Widget, and opens LogoutModal', async () => {
+    const user = userEvent.setup();
+    renderApp('/', mockLearnerUser);
+
+    const avatarBtn = await screen.findByRole('button', { name: /Mở menu tài khoản/i });
+    expect(avatarBtn).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(avatarBtn);
+    expect(avatarBtn).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText(mockLearnerUser.email)).toBeInTheDocument();
+
+    // Open Support Widget from AccountMenu
+    await user.click(screen.getByRole('menuitem', { name: /Hỗ trợ & Góp ý/i }));
+    expect(avatarBtn).toHaveAttribute('aria-expanded', 'false');
+    expect(await screen.findByRole('dialog', { name: /Hỗ trợ Quản trị viên/i })).toBeInTheDocument();
+
+    // Re-open AccountMenu and trigger Logout confirmation modal
+    await user.click(avatarBtn);
+    await user.click(screen.getByRole('menuitem', { name: /Đăng xuất/i }));
+    expect(await screen.findByRole('button', { name: /Đăng xuất ngay/i })).toBeInTheDocument();
+  });
 });

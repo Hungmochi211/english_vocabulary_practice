@@ -1,9 +1,10 @@
-import { useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { BookOpen, LogIn, Mail, Lock } from 'lucide-react';
 import { useAuth } from '@/app/AuthProvider';
 import { ApiError } from '@/services/api/httpClient';
+import { loadGoogleIdentityApi } from '@/utils/googleIdentity';
 
 const loginSchema = z.object({
   email: z.string().trim().email('Vui lòng nhập địa chỉ email hợp lệ.'),
@@ -49,6 +50,75 @@ export function LoginPage() {
     reasonNotice?.tone === 'error' ? reasonNotice.message : null,
   );
   const [submitting, setSubmitting] = useState(false);
+  const [gisReady, setGisReady] = useState(false);
+  const googleButtonContainerRef = useRef<HTMLDivElement | null>(null);
+  const isTestMode = import.meta.env?.MODE === 'test';
+  const googleClientId = isTestMode
+    ? ''
+    : ((import.meta.env?.VITE_GOOGLE_CLIENT_ID as string | undefined) || '').trim();
+
+  const handleGoogleCredential = useCallback(
+    async (idToken: string) => {
+      setFieldError(null);
+      setServerError(null);
+      setSubmitting(true);
+      try {
+        await loginWithGoogle(idToken);
+        navigate(redirectTo, { replace: true });
+      } catch (err) {
+        if (err instanceof ApiError) {
+          setServerError(err.message);
+        } else {
+          setServerError('Đăng nhập Google thất bại. Vui lòng thử lại.');
+        }
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [loginWithGoogle, navigate, redirectTo],
+  );
+
+  useEffect(() => {
+    if (!googleClientId) {
+      setGisReady(false);
+      return;
+    }
+
+    let cancelled = false;
+    loadGoogleIdentityApi()
+      .then((gsi) => {
+        if (cancelled) return;
+        gsi.initialize({
+          client_id: googleClientId,
+          callback: (response) => {
+            if (response.credential) {
+              void handleGoogleCredential(response.credential);
+            } else {
+              setServerError('Không nhận được mã xác thực từ Google. Vui lòng thử lại.');
+            }
+          },
+        });
+        if (googleButtonContainerRef.current) {
+          googleButtonContainerRef.current.innerHTML = '';
+          gsi.renderButton(googleButtonContainerRef.current, {
+            theme: 'outline',
+            size: 'large',
+            text: 'continue_with',
+            shape: 'rectangular',
+            width: 360,
+            locale: 'vi',
+          });
+          setGisReady(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setGisReady(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [googleClientId, handleGoogleCredential]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -77,24 +147,16 @@ export function LoginPage() {
   }
 
   async function handleGoogleLogin() {
-    setFieldError(null);
-    setServerError(null);
-    setSubmitting(true);
-    try {
-      const idToken = (import.meta.env?.VITE_GOOGLE_CLIENT_ID as string | undefined)
-        ? 'google-oauth-id-token'
-        : 'demo-google-id-token';
-      await loginWithGoogle(idToken);
-      navigate(redirectTo, { replace: true });
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setServerError(err.message);
-      } else {
-        setServerError('Đăng nhập Google thất bại. Vui lòng thử lại.');
+    if (googleClientId) {
+      try {
+        const gsi = await loadGoogleIdentityApi();
+        gsi.prompt();
+      } catch {
+        setServerError('Không thể tải Google Sign-In SDK. Vui lòng kiểm tra kết nối mạng.');
       }
-    } finally {
-      setSubmitting(false);
+      return;
     }
+    await handleGoogleCredential('demo-google-id-token');
   }
 
   return (
@@ -181,14 +243,23 @@ export function LoginPage() {
           <div className="h-px flex-1 bg-slate-200" />
         </div>
 
-        <button
-          type="button"
-          onClick={handleGoogleLogin}
-          disabled={submitting}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
-        >
-          <span>Đăng nhập bằng Google</span>
-        </button>
+        {googleClientId && (
+          <div
+            ref={googleButtonContainerRef}
+            className={gisReady ? 'flex justify-center' : 'hidden'}
+          />
+        )}
+
+        {(!googleClientId || !gisReady) && (
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={submitting}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+          >
+            <span>Đăng nhập bằng Google</span>
+          </button>
+        )}
 
         <p className="mt-5 text-center text-sm text-slate-500">
           Chưa có tài khoản?{' '}

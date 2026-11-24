@@ -19,7 +19,7 @@ Tài liệu này khóa chặt hợp đồng giao tiếp giữa Frontend (`font-e
 | Đăng xuất phiên hiện tại | `POST /auth/logout` | Xóa toàn bộ `queryClient.clear()` & session |
 | Đổi mật khẩu (thu hồi mọi phiên) | `POST /auth/change-password` | Xóa session → chuyển `/login` kèm thông báo |
 | Lấy hồ sơ hiện tại | `GET /users/me` | `['users', 'me']` |
-| Cập nhật hồ sơ & nhắc học | `PATCH /users/me` | `['users', 'me']`, đồng bộ Bảng xếp hạng |
+| Cập nhật hồ sơ, xóa ảnh (`avatarUrl: null`) & nhắc học | `PATCH /users/me` | `['users', 'me']`, đồng bộ Bảng xếp hạng (ảnh tải từ máy lưu cục bộ v1 qua `localAvatarAdapter`, không gửi base64 > 500 ký tự lên Backend) |
 
 ### 1.2. Từ vựng & Tra cứu Từ điển (từ `specs/001-vocabulary-data/contracts/openapi.yaml`)
 

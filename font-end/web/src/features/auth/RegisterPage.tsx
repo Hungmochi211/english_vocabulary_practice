@@ -8,8 +8,14 @@ import { ApiError } from '@/services/api/httpClient';
 const registerSchema = z
   .object({
     fullName: z.string().trim().min(1, 'Vui lòng nhập họ và tên.').max(100, 'Họ tên tối đa 100 ký tự.'),
-    email: z.string().trim().email('Vui lòng nhập địa chỉ email hợp lệ.'),
-    password: z.string().min(8, 'Mật khẩu phải có tối thiểu 8 ký tự.'),
+    email: z.string().trim().email('Vui lòng nhập địa chỉ email hợp lệ.').max(255, 'Email tối đa 255 ký tự.'),
+    password: z
+      .string()
+      .min(8, 'Mật khẩu phải có tối thiểu 8 ký tự.')
+      .max(72, 'Mật khẩu tối đa 72 ký tự.')
+      .refine((val) => /[A-Za-z]/.test(val) && /\d/.test(val), {
+        message: 'Mật khẩu phải chứa ít nhất 1 chữ cái và 1 chữ số.',
+      }),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {

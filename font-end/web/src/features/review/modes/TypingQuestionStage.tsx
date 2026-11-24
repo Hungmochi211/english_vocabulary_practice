@@ -68,6 +68,7 @@ export function TypingQuestionStage({
           id="review-typing-input"
           type="text"
           autoComplete="off"
+          maxLength={100}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {

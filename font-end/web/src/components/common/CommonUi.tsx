@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { AlertCircle, Inbox, RefreshCw, X } from 'lucide-react';
 
 export function Skeleton({ className = 'h-5 w-full' }: { className?: string }) {
@@ -144,13 +152,25 @@ const ToastContext = createContext<ToastContextValue>({
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const timersRef = useRef<number[]>([]);
+
+  useEffect(() => {
+    return () => {
+      for (const timer of timersRef.current) {
+        window.clearTimeout(timer);
+      }
+      timersRef.current = [];
+    };
+  }, []);
 
   const showToast = useCallback((message: string, tone: 'info' | 'success' | 'error' = 'info') => {
     const id = Date.now() + Math.floor(Math.random() * 1000);
     setToasts((prev) => [...prev, { id, message, tone }]);
-    window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       setToasts((prev) => prev.filter((item) => item.id !== id));
+      timersRef.current = timersRef.current.filter((t) => t !== timer);
     }, 3000);
+    timersRef.current.push(timer);
   }, []);
 
   return (

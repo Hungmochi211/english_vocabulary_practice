@@ -27,15 +27,17 @@ export function AdminUsersPage() {
   });
 
   const statusMutation = useMutation({
-    mutationFn: ({ userId, isActive }: { userId: number; isActive: boolean }) =>
+    mutationFn: ({ userId, isActive }: { userId: number; isActive: boolean; email: string }) =>
       adminApi.updateUserStatus(userId, isActive),
-    onSuccess: (updated) => {
+    onSuccess: (updated, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
       void queryClient.invalidateQueries({ queryKey: ['admin', 'audit-logs'] });
+      const activeAfter = updated?.isActive ?? variables.isActive;
+      const targetEmail = updated?.email ?? variables.email;
       showToast(
-        updated.isActive
-          ? `Đã mở khóa tài khoản ${updated.email}`
-          : `Đã khóa tài khoản ${updated.email}`,
+        activeAfter
+          ? `Đã mở khóa tài khoản ${targetEmail}`
+          : `Đã khóa tài khoản ${targetEmail}`,
         'success',
       );
       setPendingTarget(null);
@@ -220,6 +222,7 @@ export function AdminUsersPage() {
           statusMutation.mutate({
             userId: pendingTarget.id,
             isActive: !pendingTarget.isActive,
+            email: pendingTarget.email,
           });
         }}
       />

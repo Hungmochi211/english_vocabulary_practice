@@ -32,9 +32,9 @@ const GRADING_META_MAP: Record<GradingStatus, GradingFeedbackMeta> = {
   phonetic_match: {
     status: 'phonetic_match',
     label: 'Đúng âm sai chữ',
-    shortHint: 'Âm đọc tương đương nhưng sai mặt chữ (+0.25 điểm).',
+    shortHint: 'Âm đọc tương đương nhưng sai mặt chữ (0 điểm).',
     tone: 'blue',
-    defaultPoints: 0.25,
+    defaultPoints: 0,
     badgeClass: 'border-sky-200 bg-sky-50 text-sky-800',
     panelClass: 'border-sky-200 bg-sky-50/70 text-sky-900',
   },
@@ -128,7 +128,7 @@ export interface LocalGradeResult {
  * Mirrors `002-backend-core` grading_status_enum rules strictly:
  * - `exact` (1.0 pt)
  * - `near_match` (0.5 pt) ONLY when `targetWord.length >= 3` and Damerau-Levenshtein distance === 1
- * - `phonetic_match` (0.25 pt) when `targetWord.length >= 3` and phonetic codes match
+ * - `phonetic_match` (0.0 pt) when `targetWord.length >= 3` and phonetic codes match
  * - `incorrect` (0.0 pt) for everything else, including all `< 3`-character short words (e.g., `go` vs `do`)
  */
 export function gradeLocalAnswer(targetWord: string, userAnswer: string | null): LocalGradeResult {
@@ -162,7 +162,7 @@ export function gradeLocalAnswer(targetWord: string, userAnswer: string | null):
   if (target.length >= 3 && computePhoneticCode(actual) === computePhoneticCode(target)) {
     return {
       gradingStatus: 'phonetic_match',
-      pointsAwarded: 0.25,
+      pointsAwarded: 0,
       feedbackMessage: `Đúng âm sai chữ. Cách viết đúng là "${targetWord}".`,
     };
   }

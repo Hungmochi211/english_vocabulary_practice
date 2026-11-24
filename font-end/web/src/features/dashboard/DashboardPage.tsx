@@ -1,11 +1,13 @@
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowRight,
   BookOpen,
   GraduationCap,
   Layers,
+  ShieldAlert,
   Sparkles,
+  X,
 } from 'lucide-react';
 import { useAuth } from '@/app/AuthProvider';
 import { statsApi } from '@/services/api/stats.api';
@@ -19,10 +21,22 @@ import {
 } from '@/components/common/StreakCard';
 import { WeeklyLeaderboardWidget } from '@/features/dashboard/WeeklyLeaderboard';
 
-const DAILY_WORD_GOAL = 15;
+const DAILY_GOAL_STORAGE_KEY = 'lexitag:v1:daily-goal';
+
+function readDailyWordGoal(): number {
+  try {
+    const saved = Number(window.localStorage.getItem(DAILY_GOAL_STORAGE_KEY));
+    return Number.isFinite(saved) && saved >= 5 && saved <= 100 ? Math.round(saved) : 15;
+  } catch {
+    return 15;
+  }
+}
 
 export function DashboardPage() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const deniedAdmin = searchParams.get('denied') === 'admin';
+  const dailyWordGoal = readDailyWordGoal();
 
   const overviewQuery = useQuery({
     queryKey: ['stats', 'overview'],
@@ -39,7 +53,7 @@ export function DashboardPage() {
 
   const todayPoint = overview?.last7Days?.[overview.last7Days.length - 1];
   const wordsToday = todayPoint?.wordsStudied ?? 0;
-  const goalPercent = Math.min(100, Math.round((wordsToday / DAILY_WORD_GOAL) * 100));
+  const goalPercent = Math.min(100, Math.round((wordsToday / dailyWordGoal) * 100));
   const ringRadius = 36;
   const ringCircumference = 2 * Math.PI * ringRadius;
   const ringOffset = ringCircumference * (1 - goalPercent / 100);
@@ -63,6 +77,29 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {deniedAdmin && (
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-900"
+        >
+          <span className="flex items-center gap-2">
+            <ShieldAlert className="h-4 w-4 shrink-0 text-amber-600" />
+            <span>Bạn không có quyền truy cập khu vực dành cho Quản trị viên.</span>
+          </span>
+          <button
+            type="button"
+            aria-label="Đóng thông báo quyền truy cập"
+            onClick={() => {
+              searchParams.delete('denied');
+              setSearchParams(searchParams, { replace: true });
+            }}
+            className="rounded-lg p-1 text-amber-700 hover:bg-amber-100"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       {/* Hero Banner + Daily Goal Ring */}
       <section className="rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50/90 via-white to-slate-50 p-6 shadow-xs sm:p-7">
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
@@ -119,7 +156,7 @@ export function DashboardPage() {
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Mục tiêu ngày</p>
               <p className="mt-1 font-heading text-xl font-extrabold text-slate-900">
-                {wordsToday} / {DAILY_WORD_GOAL} từ
+                {wordsToday} / {dailyWordGoal} từ
               </p>
               <p className="mt-0.5 text-xs text-slate-500">
                 {overview?.completedToday ? 'Đã hoàn thành mục tiêu hôm nay!' : 'Học thêm để giữ chuỗi Streak'}

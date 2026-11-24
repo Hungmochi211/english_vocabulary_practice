@@ -56,21 +56,23 @@ function GuestOnlyRoute() {
 }
 
 function ProtectedRoute() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, invalidReason } = useAuth();
   const location = useLocation();
   if (!isAuthenticated) {
     const redirect = encodeURIComponent(`${location.pathname}${location.search}`);
-    return <Navigate to={`/login?redirect=${redirect}`} replace />;
+    const reasonParam = invalidReason ? `&reason=${invalidReason}` : '';
+    return <Navigate to={`/login?redirect=${redirect}${reasonParam}`} replace />;
   }
   return <Outlet />;
 }
 
 function AdminRoute() {
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin, invalidReason } = useAuth();
   const location = useLocation();
   if (!isAuthenticated) {
     const redirect = encodeURIComponent(`${location.pathname}${location.search}`);
-    return <Navigate to={`/login?redirect=${redirect}`} replace />;
+    const reasonParam = invalidReason ? `&reason=${invalidReason}` : '';
+    return <Navigate to={`/login?redirect=${redirect}${reasonParam}`} replace />;
   }
   if (!isAdmin) {
     return <Navigate to="/?denied=admin" replace />;

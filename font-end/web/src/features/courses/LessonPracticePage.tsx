@@ -41,23 +41,28 @@ export function LessonPracticePage() {
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [responseTimes, setResponseTimes] = useState<Record<number, number>>({});
   const questionStartRef = useRef<number>(Date.now());
+  const sessionStartRef = useRef<number>(Date.now());
 
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<QuizSubmitResult | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
 
   const startAttempt = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     setSubmitResult(null);
     setSubmitError(null);
+    setAlreadySubmitted(false);
     setCurrentIndex(0);
     setAnswers({});
     setResponseTimes({});
     try {
       const started = await learningApi.startLessonPractice(lessonId);
       setAttempt(started);
-      questionStartRef.current = Date.now();
+      const now = Date.now();
+      questionStartRef.current = now;
+      sessionStartRef.current = now;
     } catch (err) {
       if (err instanceof ApiError) {
         setLoadError({ code: err.code, message: err.message });
@@ -72,6 +77,9 @@ export function LessonPracticePage() {
   useEffect(() => {
     if (Number.isFinite(lessonId) && lessonId > 0) {
       void startAttempt();
+    } else {
+      setLoading(false);
+      setLoadError({ code: 'INVALID_LESSON_ID', message: 'Mã bài học không hợp lệ.' });
     }
   }, [lessonId, startAttempt]);
 
@@ -96,14 +104,14 @@ export function LessonPracticePage() {
   }
 
   async function handleSubmit() {
-    if (!attempt || submitting) return;
+    if (!attempt || submitting || alreadySubmitted) return;
     const latestTimes = recordCurrentTime();
     setSubmitting(true);
     setSubmitError(null);
 
     const payload: QuizAnswerSubmission[] = attempt.questions.map((q) => ({
       vocabularyId: q.vocabularyId,
-      userAnswer: answers[q.vocabularyId]?.trim() || null,
+      userAnswer: answers[q.vocabularyId]?.trim().slice(0, 100) || null,
       responseTimeMs: clampResponseTimeMs(latestTimes[q.vocabularyId] ?? 1000),
     }));
 
@@ -111,6 +119,8 @@ export function LessonPracticePage() {
       const result = await learningApi.submitAttempt(attempt.attemptId, payload);
       setSubmitResult(result);
       await invalidateLearningCaches(queryClient);
+      const elapsedSec = Math.max(1, Math.round((Date.now() - sessionStartRef.current) / 1000));
+      const formattedDuration = `${String(Math.floor(elapsedSec / 60)).padStart(2, '0')}:${String(elapsedSec % 60).padStart(2, '0')}`;
       historyAdapter.record({
         type: 'typing',
         title: `Thực hành Bước 2 — Bài #${lessonId}`,
@@ -118,7 +128,7 @@ export function LessonPracticePage() {
         total: result.totalQuestions,
         accuracy: result.scorePercent,
         xp: result.xpEarned,
-        duration: '01:30',
+        duration: formattedDuration,
         words: result.results.map((r) => ({
           vocabularyId: r.vocabularyId,
           word: r.word,
@@ -144,6 +154,7 @@ export function LessonPracticePage() {
       );
     } catch (err) {
       if (err instanceof ApiError && err.code === 'ATTEMPT_ALREADY_SUBMITTED') {
+        setAlreadySubmitted(true);
         setSubmitError(err.message);
       } else if (err instanceof ApiError) {
         setSubmitError(err.message);
@@ -168,7 +179,9 @@ export function LessonPracticePage() {
     return (
       <div className="mx-auto max-w-2xl space-y-4">
         <ErrorRetryBox message={loadError.message} onRetry={() => void startAttempt()} />
-        {(loadError.code === 'ACQUISITION_INCOMPLETE' || loadError.code === 'LESSON_LOCKED') && (
+        {(loadError.code === 'ACQUISITION_REQUIRED' ||
+          loadError.code === 'ACQUISITION_INCOMPLETE' ||
+          loadError.code === 'LESSON_LOCKED') && (
           <div className="text-center">
             <Link
               to={`/courses/${lessonId}/study`}
@@ -303,8 +316,21 @@ export function LessonPracticePage() {
       </div>
 
       {submitError && (
-        <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">
-          {submitError}
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800"
+        >
+          <span>{submitError}</span>
+          {alreadySubmitted && (
+            <button
+              type="button"
+              onClick={() => void startAttempt()}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white hover:bg-slate-800"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              <span>Bắt đầu lượt thực hành mới</span>
+            </button>
+          )}
         </div>
       )}
 
@@ -405,6 +431,7 @@ export function LessonPracticePage() {
                   id="lesson-practice-input"
                   type="text"
                   autoComplete="off"
+                  maxLength={100}
                   value={answers[currentQuestion.vocabularyId] ?? ''}
                   onChange={(e) =>
                     setAnswers((prev) => ({
@@ -412,6 +439,16 @@ export function LessonPracticePage() {
                       [currentQuestion.vocabularyId]: e.target.value,
                     }))
                   }
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (currentIndex < questions.length - 1) {
+                        handleNextQuestion();
+                      } else {
+                        void handleSubmit();
+                      }
+                    }
+                  }}
                   placeholder="Gõ từ vựng tương ứng..."
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base font-medium text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                 />
@@ -432,11 +469,17 @@ export function LessonPracticePage() {
             ) : (
               <button
                 type="button"
-                disabled={submitting}
+                disabled={submitting || alreadySubmitted}
                 onClick={() => void handleSubmit()}
                 className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60"
               >
-                <span>{submitting ? 'Đang chấm điểm...' : 'Nộp bài & Chấm điểm'}</span>
+                <span>
+                  {alreadySubmitted
+                    ? 'Lượt làm bài đã được nộp'
+                    : submitting
+                      ? 'Đang chấm điểm...'
+                      : 'Nộp bài & Chấm điểm'}
+                </span>
               </button>
             )}
           </div>

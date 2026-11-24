@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { reviewApi } from '@/services/api/review.api';
 import { learningApi } from '@/services/api/learning.api';
+import { statsApi } from '@/services/api/stats.api';
 import { ApiError } from '@/services/api/httpClient';
 import { invalidateLearningCaches } from '@/app/queryClient';
 import { clampResponseTimeMs } from '@/utils/formatters';
@@ -36,6 +37,7 @@ import { notificationsAdapter } from '@/services/adapters/notifications.adapter'
 import type {
   DueReviewItem,
   GradedAnswerResult,
+  LeitnerDistribution,
   QuizAnswerSubmission,
   QuizAttemptStart,
   QuizQuestion,
@@ -43,6 +45,72 @@ import type {
   ReviewSessionOrigin,
   SavedWordRecord,
 } from '@/types/models';
+
+const FALLBACK_QUIZ_DISTRACTORS = [
+  'achieve',
+  'balance',
+  'climate',
+  'discover',
+  'energy',
+  'freedom',
+  'horizon',
+  'inspire',
+  'journey',
+  'library',
+  'natural',
+  'protect',
+];
+
+function deriveLeitnerFromDueItems(items: DueReviewItem[]): LeitnerDistribution {
+  const dist: LeitnerDistribution = { box1: 0, box2: 0, box3: 0, box4: 0, box5: 0 };
+  for (const item of items) {
+    if (item.leitnerBox === 1) dist.box1 += 1;
+    else if (item.leitnerBox === 2) dist.box2 += 1;
+    else if (item.leitnerBox === 3) dist.box3 += 1;
+    else if (item.leitnerBox === 4) dist.box4 += 1;
+    else if (item.leitnerBox === 5) dist.box5 += 1;
+  }
+  return dist;
+}
+
+function buildClientQuizQuestion(
+  question: QuizQuestion,
+  targetWord: string,
+  candidateWords: string[],
+  fallbackMeaning?: string,
+): QuizQuestion {
+  if (question.prompt.options && question.prompt.options.length > 0) {
+    return question;
+  }
+  const cleanTarget = targetWord.trim();
+  if (!cleanTarget) return question;
+
+  const distractors: string[] = [];
+  const seen = new Set<string>([cleanTarget.toLowerCase()]);
+  for (const w of [...candidateWords, ...FALLBACK_QUIZ_DISTRACTORS]) {
+    const clean = w.trim();
+    const key = clean.toLowerCase();
+    if (clean && !seen.has(key)) {
+      seen.add(key);
+      distractors.push(clean);
+      if (distractors.length === 3) break;
+    }
+  }
+
+  const options = [cleanTarget, ...distractors];
+  const shift = question.vocabularyId % options.length;
+  const rotated = [...options.slice(shift), ...options.slice(0, shift)];
+
+  return {
+    ...question,
+    prompt: {
+      ...question.prompt,
+      word: undefined,
+      vietnameseMeaning: question.prompt.vietnameseMeaning || fallbackMeaning,
+      options: rotated,
+    },
+  };
+}
 
 type ReviewUiMode = 'srs' | 'quiz' | 'typing' | 'dictation';
 
@@ -93,12 +161,18 @@ export function ReviewCenterPage() {
   const questionStartRef = useRef<number>(Date.now());
 
   const [submitting, setSubmitting] = useState(false);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [summary, setSummary] = useState<QuizSubmitResult | null>(null);
 
   const dueQuery = useQuery({
     queryKey: ['reviews', 'due'],
     queryFn: () => reviewApi.getDueReviews(),
+  });
+
+  const overviewQuery = useQuery({
+    queryKey: ['stats', 'overview'],
+    queryFn: () => statsApi.getOverview(),
   });
 
   useEffect(() => {
@@ -155,13 +229,15 @@ export function ReviewCenterPage() {
 
   const dueItems = dueQuery.data?.items ?? [];
   const dueCount = dueQuery.data?.dueCount ?? 0;
-  const distribution = dueQuery.data?.leitnerDistribution ?? {
-    box1: 0,
-    box2: 0,
-    box3: 0,
-    box4: 0,
-    box5: 0,
-  };
+  const distribution: LeitnerDistribution = useMemo(() => {
+    if (overviewQuery.data?.leitnerDistribution) {
+      return overviewQuery.data.leitnerDistribution;
+    }
+    if (dueQuery.data?.leitnerDistribution) {
+      return dueQuery.data.leitnerDistribution;
+    }
+    return deriveLeitnerFromDueItems(dueItems);
+  }, [dueItems, dueQuery.data?.leitnerDistribution, overviewQuery.data?.leitnerDistribution]);
 
   const filteredDuePreview = useMemo(() => {
     if (selectedBox === null) return dueItems;
@@ -179,6 +255,7 @@ export function ReviewCenterPage() {
   function initSessionState(nextSession: ActiveSession) {
     setSession(nextSession);
     setSummary(null);
+    setAlreadySubmitted(false);
     setSubmitError(null);
     setCurrentIndex(0);
     setAnswers({});
@@ -317,7 +394,7 @@ export function ReviewCenterPage() {
   }
 
   async function submitSession(finalAnswersMap: Record<number, string>) {
-    if (!session || submitting) return;
+    if (!session || submitting || alreadySubmitted) return;
     const latestTimes = captureCurrentResponseTime();
     setSubmitting(true);
     setSubmitError(null);
@@ -383,7 +460,7 @@ export function ReviewCenterPage() {
 
     const payload: QuizAnswerSubmission[] = session.questions.map((q) => ({
       vocabularyId: q.vocabularyId,
-      userAnswer: finalAnswersMap[q.vocabularyId]?.trim() || null,
+      userAnswer: finalAnswersMap[q.vocabularyId]?.trim().slice(0, 100) || null,
       responseTimeMs: clampResponseTimeMs(latestTimes[q.vocabularyId] ?? 1000),
     }));
 
@@ -427,6 +504,7 @@ export function ReviewCenterPage() {
       showToast(`Hoàn tất phiên ôn tập! Đạt ${result.scorePercent}% (+${result.xpEarned} XP)`, 'success');
     } catch (err) {
       if (err instanceof ApiError && err.code === 'ATTEMPT_ALREADY_SUBMITTED') {
+        setAlreadySubmitted(true);
         setSubmitError(err.message);
       } else if (err instanceof ApiError) {
         setSubmitError(err.message);
@@ -608,26 +686,76 @@ export function ReviewCenterPage() {
         {submitError && (
           <div
             role="alert"
-            className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800"
           >
-            {submitError}
+            <span>{submitError}</span>
+            {alreadySubmitted && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSession(null);
+                  setSummary(null);
+                  setAlreadySubmitted(false);
+                  setSubmitError(null);
+                  void dueQuery.refetch();
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white hover:bg-slate-800"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                <span>Về Trung tâm Ôn tập</span>
+              </button>
+            )}
           </div>
         )}
 
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           {effectiveMode === 'srs' && currentDueItem ? (
-            <SrsFlashcardStage item={currentDueItem} onRate={handleSrsRate} />
-          ) : effectiveMode === 'quiz' && currentQuestion.prompt.options?.length ? (
-            <QuizQuestionStage
-              question={currentQuestion}
-              selectedAnswer={answers[currentQuestion.vocabularyId] ?? ''}
-              onSelect={(val) =>
-                setAnswers((prev) => ({ ...prev, [currentQuestion.vocabularyId]: val }))
-              }
-              onEnterNext={() => (isLast ? void submitSession(answers) : handleNextQuestion())}
+            <SrsFlashcardStage
+              key={`${currentQuestion.vocabularyId}-${currentIndex}`}
+              item={currentDueItem}
+              onRate={handleSrsRate}
             />
+          ) : effectiveMode === 'quiz' ? (
+            (() => {
+              const targetWord =
+                session.targetWordsByVocabId[currentQuestion.vocabularyId] ||
+                currentDueItem?.word ||
+                '';
+              const distractorPool = [
+                ...Object.values(session.targetWordsByVocabId),
+                ...dueItems.map((d) => d.word),
+              ];
+              const quizQuestion = buildClientQuizQuestion(
+                currentQuestion,
+                targetWord,
+                distractorPool,
+                currentDueItem?.vietnameseMeaning,
+              );
+              return quizQuestion.prompt.options?.length ? (
+                <QuizQuestionStage
+                  key={`${currentQuestion.vocabularyId}-${currentIndex}`}
+                  question={quizQuestion}
+                  selectedAnswer={answers[currentQuestion.vocabularyId] ?? ''}
+                  onSelect={(val) =>
+                    setAnswers((prev) => ({ ...prev, [currentQuestion.vocabularyId]: val }))
+                  }
+                  onEnterNext={() => (isLast ? void submitSession(answers) : handleNextQuestion())}
+                />
+              ) : (
+                <TypingQuestionStage
+                  key={`${currentQuestion.vocabularyId}-${currentIndex}`}
+                  question={currentQuestion}
+                  value={answers[currentQuestion.vocabularyId] ?? ''}
+                  onChange={(val) =>
+                    setAnswers((prev) => ({ ...prev, [currentQuestion.vocabularyId]: val }))
+                  }
+                  onEnterNext={() => (isLast ? void submitSession(answers) : handleNextQuestion())}
+                />
+              );
+            })()
           ) : effectiveMode === 'dictation' ? (
             <DictationQuestionStage
+              key={`${currentQuestion.vocabularyId}-${currentIndex}`}
               question={currentQuestion}
               spokenFallbackText={spokenText}
               value={answers[currentQuestion.vocabularyId] ?? ''}
@@ -638,6 +766,7 @@ export function ReviewCenterPage() {
             />
           ) : (
             <TypingQuestionStage
+              key={`${currentQuestion.vocabularyId}-${currentIndex}`}
               question={currentQuestion}
               value={answers[currentQuestion.vocabularyId] ?? ''}
               onChange={(val) =>
@@ -661,7 +790,7 @@ export function ReviewCenterPage() {
               ) : (
                 <button
                   type="button"
-                  disabled={submitting || Boolean(submitError)}
+                  disabled={submitting || alreadySubmitted}
                   onClick={() => void submitSession(answers)}
                   className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
                 >

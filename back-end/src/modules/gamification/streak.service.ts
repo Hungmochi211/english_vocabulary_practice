@@ -171,7 +171,7 @@ export class StreakService implements StreakProgressRecorder, OnModuleInit {
     const yesterday = addDaysUtc7(today, -1);
     const last7Dates = getLast7DaysUtc7(now);
 
-    const [streakRows, boxRows, dueRows, logRows, completedLessonsRows] = await Promise.all([
+    const [streakRows, boxRows, dueRows, logRows, completedLessonsRows, totalXpRows] = await Promise.all([
       this.dataSource.query(
         `
         SELECT current_streak, longest_streak, TO_CHAR(last_study_date, 'YYYY-MM-DD') AS last_study_date
@@ -219,6 +219,14 @@ export class StreakService implements StreakProgressRecorder, OnModuleInit {
         `,
         [userId],
       ),
+      this.dataSource.query(
+        `
+        SELECT COALESCE(ROUND(SUM(total_score) * 10), 0)::int AS xp
+        FROM quiz_attempts
+        WHERE user_id = $1 AND status = 'submitted';
+        `,
+        [userId],
+      ),
     ]);
 
     const rawCurrent = streakRows.length > 0 ? Number(streakRows[0].current_streak) : 0;
@@ -236,8 +244,11 @@ export class StreakService implements StreakProgressRecorder, OnModuleInit {
       box4: 0,
       box5: 0,
     };
+    let learnedWordsCount = 0;
     for (const r of boxRows) {
-      leitnerBoxes[`box${r.box}`] = Number(r.cnt);
+      const cnt = Number(r.cnt);
+      leitnerBoxes[`box${r.box}`] = cnt;
+      learnedWordsCount += cnt;
     }
 
     const logsByDate = new Map<string, Record<string, unknown>>();
@@ -263,6 +274,8 @@ export class StreakService implements StreakProgressRecorder, OnModuleInit {
       lastStudyDate,
       dueReviewsToday: dueRows[0]?.cnt ?? 0,
       completedLessonsCount: completedLessonsRows[0]?.cnt ?? 0,
+      learnedWordsCount,
+      totalXp: totalXpRows[0]?.xp ?? 0,
       leitnerBoxes,
       last7Days,
     };
@@ -270,40 +283,55 @@ export class StreakService implements StreakProgressRecorder, OnModuleInit {
 
   async getAdminStats() {
     const today = getTodayUtc7Date();
-    const [usersRow, activeTodayRow, attemptsRow, sm2Row] = await Promise.all([
-      this.dataSource.query(
-        `
-        SELECT
-          COUNT(*)::int AS "totalUsers",
-          COUNT(*) FILTER (WHERE is_active = TRUE)::int AS "activeUsers"
-        FROM users;
-        `,
-      ),
-      this.dataSource.query(
-        `
-        SELECT COUNT(DISTINCT user_id)::int AS "activeLearnersToday"
-        FROM daily_study_logs
-        WHERE study_date = $1::date;
-        `,
-        [today],
-      ),
-      this.dataSource.query(
-        `
-        SELECT COUNT(*)::int AS "totalSubmittedQuizzes"
-        FROM quiz_attempts
-        WHERE status = 'submitted';
-        `,
-      ),
-      this.dataSource.query(
-        `SELECT COUNT(*)::int AS "totalSm2CardsTracked" FROM user_sm2_reviews;`,
-      ),
-    ]);
+    const [usersRow, activeTodayRow, attemptsRow, attemptsTodayRow, vocabRow, sm2Row] =
+      await Promise.all([
+        this.dataSource.query(
+          `
+          SELECT
+            COUNT(*)::int AS "totalUsers",
+            COUNT(*) FILTER (WHERE is_active = TRUE)::int AS "activeUsers"
+          FROM users;
+          `,
+        ),
+        this.dataSource.query(
+          `
+          SELECT COUNT(DISTINCT user_id)::int AS "activeLearnersToday"
+          FROM daily_study_logs
+          WHERE study_date = $1::date;
+          `,
+          [today],
+        ),
+        this.dataSource.query(
+          `
+          SELECT COUNT(*)::int AS "totalSubmittedQuizzes"
+          FROM quiz_attempts
+          WHERE status = 'submitted';
+          `,
+        ),
+        this.dataSource.query(
+          `
+          SELECT COUNT(*)::int AS "totalAttemptsToday"
+          FROM quiz_attempts
+          WHERE status = 'submitted'
+            AND (submitted_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date = $1::date;
+          `,
+          [today],
+        ),
+        this.dataSource.query(
+          `SELECT COUNT(*)::int AS "totalVocabularyCount" FROM vocabularies;`,
+        ),
+        this.dataSource.query(
+          `SELECT COUNT(*)::int AS "totalSm2CardsTracked" FROM user_sm2_reviews;`,
+        ),
+      ]);
 
     return {
       totalUsers: usersRow[0]?.totalUsers ?? 0,
       activeUsers: usersRow[0]?.activeUsers ?? 0,
       activeLearnersToday: activeTodayRow[0]?.activeLearnersToday ?? 0,
       totalSubmittedQuizzes: attemptsRow[0]?.totalSubmittedQuizzes ?? 0,
+      totalAttemptsToday: attemptsTodayRow[0]?.totalAttemptsToday ?? 0,
+      totalVocabularyCount: vocabRow[0]?.totalVocabularyCount ?? 0,
       totalSm2CardsTracked: sm2Row[0]?.totalSm2CardsTracked ?? 0,
     };
   }

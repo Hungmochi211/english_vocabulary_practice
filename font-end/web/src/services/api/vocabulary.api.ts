@@ -1,4 +1,5 @@
 import { ApiError, httpClient } from '@/services/api/httpClient';
+import { normalizeLessonProgress, normalizeTopic } from '@/services/api/normalizers';
 import type {
   CefrLevel,
   LessonDetail,
@@ -93,8 +94,11 @@ function normalizeSearchResponse(
 }
 
 export const vocabularyApi = {
-  listTopics(): Promise<Topic[]> {
-    return httpClient.get<Topic[]>('/topics');
+  async listTopics(): Promise<Topic[]> {
+    const raw = await httpClient.get<
+      Array<Topic & { code?: string; nameVi?: string; totalLessons?: number }>
+    >('/topics');
+    return Array.isArray(raw) ? raw.map(normalizeTopic) : [];
   },
 
   async listLessons(params?: {
@@ -108,15 +112,19 @@ export const vocabularyApi = {
       { params },
     );
     if (Array.isArray(raw)) {
+      const items = raw.map((item) => normalizeLessonProgress(item));
       return {
-        items: raw,
+        items,
         page: params?.page ?? 1,
-        limit: params?.limit ?? (raw.length || 20),
-        total: raw.length,
+        limit: params?.limit ?? (items.length || 20),
+        total: items.length,
         totalPages: 1,
       };
     }
-    return raw;
+    return {
+      ...raw,
+      items: Array.isArray(raw.items) ? raw.items.map((item) => normalizeLessonProgress(item)) : [],
+    };
   },
 
   async getLessonDetail(lessonId: number): Promise<LessonDetail> {

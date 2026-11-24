@@ -1,8 +1,10 @@
 import { httpClient } from '@/services/api/httpClient';
+import { normalizeStatsOverview } from '@/services/api/normalizers';
 import type { StatsOverview } from '@/types/models';
 
 export const statsApi = {
-  getOverview(): Promise<StatsOverview> {
-    return httpClient.get<StatsOverview>('/stats/overview');
+  async getOverview(): Promise<StatsOverview> {
+    const raw = await httpClient.get<unknown>('/stats/overview');
+    return normalizeStatsOverview(raw);
   },
 };

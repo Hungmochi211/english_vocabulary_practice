@@ -110,6 +110,18 @@ export class UsersService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const offset = (page - 1) * limit;
+    const keyword = query.q?.trim();
+    const hasSearch = Boolean(keyword && keyword.length > 0);
+    const searchPattern = hasSearch
+      ? `%${keyword!.replace(/[\\%_]/g, (m) => `\\${m}`)}%`
+      : null;
+
+    const whereClause = hasSearch
+      ? `WHERE (u.email ILIKE $1 ESCAPE '\\' OR u.full_name ILIKE $1 ESCAPE '\\')`
+      : '';
+    const itemParams = hasSearch ? [searchPattern, limit, offset] : [limit, offset];
+    const limitPlaceholder = hasSearch ? '$2' : '$1';
+    const offsetPlaceholder = hasSearch ? '$3' : '$2';
 
     const [items, totalRows] = await Promise.all([
       this.dataSource.query(
@@ -124,14 +136,20 @@ export class UsersService {
           u.auth_provider AS "authProvider",
           u.email_reminder_enabled AS "emailReminderEnabled",
           u.is_active AS "isActive",
+          COALESCE(s.current_streak, 0)::int AS "currentStreak",
           u.created_at AS "createdAt"
         FROM users u
+        LEFT JOIN user_streaks s ON s.user_id = u.id
+        ${whereClause}
         ORDER BY u.id DESC
-        LIMIT $1 OFFSET $2;
+        LIMIT ${limitPlaceholder} OFFSET ${offsetPlaceholder};
         `,
-        [limit, offset],
+        itemParams,
       ),
-      this.dataSource.query(`SELECT COUNT(*)::int AS total FROM users;`),
+      this.dataSource.query(
+        `SELECT COUNT(*)::int AS total FROM users u ${whereClause};`,
+        hasSearch ? [searchPattern] : [],
+      ),
     ]);
 
     const total = totalRows[0]?.total ?? 0;

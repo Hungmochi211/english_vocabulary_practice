@@ -1,4 +1,5 @@
 import { httpClient } from '@/services/api/httpClient';
+import { normalizeQuizAttemptStart } from '@/services/api/normalizers';
 import type { DueReviewsResponse, QuizAttemptStart } from '@/types/models';
 
 type RawDueReviewsResponse = Partial<DueReviewsResponse> & {
@@ -19,15 +20,17 @@ export const reviewApi = {
     };
   },
 
-  startSm2Session(limit = 20): Promise<QuizAttemptStart> {
+  async startSm2Session(limit = 20): Promise<QuizAttemptStart> {
     const safeLimit = Math.max(1, Math.min(50, Math.round(limit)));
-    return httpClient.post<QuizAttemptStart>('/reviews/session/start', { limit: safeLimit });
+    const raw = await httpClient.post<unknown>('/reviews/session/start', { limit: safeLimit });
+    return normalizeQuizAttemptStart(raw);
   },
 
-  startMixedQuiz(totalQuestions = 10): Promise<QuizAttemptStart> {
+  async startMixedQuiz(totalQuestions = 10): Promise<QuizAttemptStart> {
     const safeTotal = Math.max(5, Math.min(40, Math.round(totalQuestions)));
-    return httpClient.post<QuizAttemptStart>('/learning/quizzes/mixed/start', {
+    const raw = await httpClient.post<unknown>('/learning/quizzes/mixed/start', {
       totalQuestions: safeTotal,
     });
+    return normalizeQuizAttemptStart(raw);
   },
 };

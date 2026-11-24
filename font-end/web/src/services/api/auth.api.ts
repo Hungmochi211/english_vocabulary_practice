@@ -1,4 +1,5 @@
-import { httpClient } from './httpClient';
+import { getStoredSession, httpClient } from './httpClient';
+import { normalizeAuthSession } from './normalizers';
 import type {
   AuthSession,
   ChangePasswordPayload,
@@ -7,17 +8,32 @@ import type {
 } from '@/types/models';
 
 export const authApi = {
-  register(payload: RegisterPayload): Promise<AuthSession> {
-    return httpClient.post<AuthSession>('/auth/register', payload);
+  async register(payload: RegisterPayload): Promise<AuthSession> {
+    const raw = await httpClient.post<AuthSession & { expiresIn?: number }>(
+      '/auth/register',
+      payload,
+    );
+    return normalizeAuthSession(raw);
   },
-  login(payload: LoginPayload): Promise<AuthSession> {
-    return httpClient.post<AuthSession>('/auth/login', payload);
+  async login(payload: LoginPayload): Promise<AuthSession> {
+    const raw = await httpClient.post<AuthSession & { expiresIn?: number }>(
+      '/auth/login',
+      payload,
+    );
+    return normalizeAuthSession(raw);
   },
-  loginWithGoogle(idToken: string): Promise<AuthSession> {
-    return httpClient.post<AuthSession>('/auth/google', { idToken });
+  async loginWithGoogle(idToken: string): Promise<AuthSession> {
+    const raw = await httpClient.post<AuthSession & { expiresIn?: number }>('/auth/google', {
+      idToken,
+    });
+    return normalizeAuthSession(raw);
   },
-  logout(refreshToken?: string): Promise<null> {
-    return httpClient.post<null>('/auth/logout', refreshToken ? { refreshToken } : {});
+  async logout(refreshToken?: string): Promise<null> {
+    const token = refreshToken?.trim() || getStoredSession()?.refreshToken?.trim();
+    if (!token) {
+      return null;
+    }
+    return httpClient.post<null>('/auth/logout', { refreshToken: token });
   },
   changePassword(payload: ChangePasswordPayload): Promise<null> {
     return httpClient.post<null>('/auth/change-password', payload);

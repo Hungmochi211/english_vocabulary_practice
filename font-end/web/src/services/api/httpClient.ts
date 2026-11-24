@@ -1,5 +1,6 @@
 import axios, { AxiosError, type AxiosRequestConfig, type InternalAxiosRequestConfig } from 'axios';
 import type { ApiErrorDetail, ApiResponse, AuthSession } from '@/types/models';
+import { normalizeAuthSession } from '@/services/api/normalizers';
 
 export const SESSION_STORAGE_KEY = 'lexitag:v1:auth-session';
 
@@ -82,8 +83,11 @@ async function performSingleFlightRefresh(): Promise<AuthSession> {
           payload?.error?.details ?? null,
         );
       }
-      setStoredSession(payload.data);
-      return payload.data;
+      const normalized = normalizeAuthSession(
+        payload.data as AuthSession & { expiresIn?: number },
+      );
+      setStoredSession(normalized);
+      return normalized;
     })
     .finally(() => {
       refreshPromise = null;

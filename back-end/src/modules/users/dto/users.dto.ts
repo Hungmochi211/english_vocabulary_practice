@@ -58,6 +58,13 @@ export class AdminPaginationQueryDto {
   @Min(1)
   @Max(100)
   limit?: number = 20;
+
+  @ApiPropertyOptional({ example: 'sv01', maxLength: 100 })
+  @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @MaxLength(100)
+  q?: string;
 }
 
 export class AdminUpdateStatusDto {

@@ -19,6 +19,7 @@ export interface VocabCandidate {
 export interface GeneratedQuestionSnapshot {
   vocabularyId: number;
   word: string;
+  phonetic?: string;
   partOfSpeech: string;
   cefrLevel: string;
   topicId: number;
@@ -26,6 +27,7 @@ export interface GeneratedQuestionSnapshot {
   prompt: string;
   vietnameseMeaning: string;
   exampleEn: string;
+  clozeExampleEn?: string;
   audioUrl: string | null;
   options: string[] | null;
   correctAnswer: string;
@@ -184,6 +186,7 @@ export class DistractorService {
       snapshots.push({
         vocabularyId: v.id,
         word: v.word,
+        phonetic: v.phonetic || '',
         partOfSpeech: v.partOfSpeech,
         cefrLevel: v.cefrLevel,
         topicId: v.topicId,
@@ -191,6 +194,7 @@ export class DistractorService {
         prompt,
         vietnameseMeaning: v.vietnameseMeaning,
         exampleEn: v.exampleEn || '',
+        clozeExampleEn: maskedExample,
         audioUrl: v.audioUrl,
         options,
         correctAnswer,

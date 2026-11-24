@@ -125,6 +125,8 @@ export class QuizGradingService {
       const gradedItems: Array<{
         vocabularyId: number;
         word: string;
+        phonetic: string;
+        vietnameseMeaning: string;
         practiceMode: string;
         userAnswer: string | null;
         correctAnswer: string;
@@ -203,6 +205,8 @@ export class QuizGradingService {
         gradedItems.push({
           vocabularyId: q.vocabularyId,
           word: q.word,
+          phonetic: q.phonetic ?? '',
+          vietnameseMeaning: q.vietnameseMeaning,
           practiceMode: q.practiceMode,
           userAnswer: rawAnswer,
           correctAnswer: q.correctAnswer,

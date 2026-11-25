@@ -32,6 +32,12 @@ function getReasonNotice(reason: string | null): { tone: 'error' | 'info'; messa
       message: 'Đổi mật khẩu thành công. Vui lòng đăng nhập lại bằng mật khẩu mới.',
     };
   }
+  if (reason === 'password_reset') {
+    return {
+      tone: 'info',
+      message: 'Đặt lại mật khẩu thành công! Vui lòng đăng nhập bằng mật khẩu mới của bạn.',
+    };
+  }
   return null;
 }
 

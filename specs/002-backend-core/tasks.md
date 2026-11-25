@@ -178,8 +178,8 @@ description: "Actionable, dependency-ordered task list for 002-backend-core impl
 **Independent Test**: Kiểm tra thư mục gốc sạch `schema_postgresql_v3.sql`, chạy pass `password-reset.e2e-spec.ts` và `user-sync-support.e2e-spec.ts` trong `back-end/tests/integration/`.
 
 - [X] T050 [US6] [Đợt 1] Di chuyển `schema_postgresql_v3.sql` sang `docs/archive/schema_postgresql_v3.sql` kèm khối cảnh báo rõ đầu tệp không nạp thủ công đè lên TypeORM migrations
-- [ ] T051 [US6] [Đợt 2 - Test] Viết Integration Test cho luồng OTP Quên/Đặt lại mật khẩu (`POST /auth/forgot-password`, `POST /auth/reset-password`, giới hạn gửi mã, sai quá 5 lần, thu hồi phiên cũ) tại `back-end/tests/integration/password-reset.e2e-spec.ts`
-- [ ] T052 [US6] [Đợt 2] Bổ sung `ForgotPasswordDto`, `ResetPasswordDto`, logic OTP SHA-256 trên Redis (TTL 10 phút) + gửi mail qua `nodemailer` và thu hồi phiên trong `back-end/src/modules/auth/`
+- [X] T051 [US6] [Đợt 2 - Test] Viết Integration Test cho luồng OTP Quên/Đặt lại mật khẩu (`POST /auth/forgot-password`, `POST /auth/reset-password`, giới hạn gửi mã, sai quá 5 lần, thu hồi phiên cũ) tại `back-end/tests/integration/password-reset.e2e-spec.ts`
+- [X] T052 [US6] [Đợt 2] Bổ sung `ForgotPasswordDto`, `ResetPasswordDto`, logic OTP SHA-256 trên Redis (TTL 10 phút) + gửi mail qua `nodemailer` và thu hồi phiên trong `back-end/src/modules/auth/`
 - [ ] T053 [US6] [Đợt 3 - Test] Viết Integration Test cho API Lịch sử học tập (`GET /learning/history` phân trang + chi tiết từng từ + cô lập theo `userId`) tại `back-end/tests/integration/user-sync-support.e2e-spec.ts`
 - [ ] T054 [US6] [Đợt 3] Cài đặt `GET /learning/history` đọc từ `quiz_attempts` và `quiz_attempt_answers` trong `back-end/src/modules/learning/learning.controller.ts` & `learning.service.ts`
 - [ ] T055 [US6] [Đợt 4] Tạo migration `back-end/src/database/migrations/1700000000003-CreateUserSyncAndSupportTables.ts` (4 bảng `user_saved_words`, `user_notifications`, `support_messages`, `support_tickets`) và đăng ký trong `back-end/src/config/database.config.ts`

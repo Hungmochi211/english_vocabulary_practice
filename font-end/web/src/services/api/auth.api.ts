@@ -3,8 +3,10 @@ import { normalizeAuthSession } from './normalizers';
 import type {
   AuthSession,
   ChangePasswordPayload,
+  ForgotPasswordPayload,
   LoginPayload,
   RegisterPayload,
+  ResetPasswordPayload,
 } from '@/types/models';
 
 export const authApi = {
@@ -37,5 +39,11 @@ export const authApi = {
   },
   changePassword(payload: ChangePasswordPayload): Promise<null> {
     return httpClient.post<null>('/auth/change-password', payload);
+  },
+  forgotPassword(payload: ForgotPasswordPayload): Promise<{ message: string }> {
+    return httpClient.post<{ message: string }>('/auth/forgot-password', payload);
+  },
+  resetPassword(payload: ResetPasswordPayload): Promise<null> {
+    return httpClient.post<null>('/auth/reset-password', payload);
   },
 };

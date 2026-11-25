@@ -363,6 +363,13 @@ let mockDb: MockDbState = createInitialMockDb();
 
 export function resetMockDb(): void {
   mockDb = createInitialMockDb();
+  mockPasswordResetOtps.clear();
+}
+
+const mockPasswordResetOtps = new Map<string, { otp: string; attempts: number }>();
+
+export function getMockPasswordResetOtp(email: string): string | null {
+  return mockPasswordResetOtps.get(email.trim().toLowerCase())?.otp ?? null;
 }
 
 export function setMockDueEmpty(): void {
@@ -1277,6 +1284,75 @@ export const handlers = [
         total: mockDb.auditLogs.length,
         totalPages: Math.max(1, Math.ceil(mockDb.auditLogs.length / limit)),
       },
+      error: null,
+    });
+  }),
+
+  http.post(`${API_BASE}/auth/forgot-password`, async ({ request }) => {
+    const body = (await request.json()) as { email?: string };
+    const email = (body.email ?? '').trim().toLowerCase();
+    if (!email || !email.includes('@')) {
+      return HttpResponse.json(
+        {
+          success: false,
+          data: null,
+          error: { code: 'VALIDATION_ERROR', message: 'Email không hợp lệ.', details: null },
+        },
+        { status: 400 },
+      );
+    }
+    mockPasswordResetOtps.set(email, { otp: '654321', attempts: 0 });
+    return HttpResponse.json({
+      success: true,
+      data: {
+        message:
+          'Nếu địa chỉ email tồn tại và đang hoạt động, mã OTP 6 chữ số đã được gửi tới hộp thư của bạn (hiệu lực 10 phút).',
+      },
+      error: null,
+    });
+  }),
+
+  http.post(`${API_BASE}/auth/reset-password`, async ({ request }) => {
+    const body = (await request.json()) as { email?: string; otp?: string; newPassword?: string };
+    const email = (body.email ?? '').trim().toLowerCase();
+    const otp = (body.otp ?? '').trim();
+    const entry = mockPasswordResetOtps.get(email);
+    if (!entry || entry.otp !== otp) {
+      if (entry) {
+        entry.attempts += 1;
+        if (entry.attempts >= 5) {
+          mockPasswordResetOtps.delete(email);
+          return HttpResponse.json(
+            {
+              success: false,
+              data: null,
+              error: {
+                code: 'OTP_MAX_ATTEMPTS_EXCEEDED',
+                message: 'Bạn đã nhập sai mã OTP quá 5 lần. Vui lòng yêu cầu gửi mã mới.',
+                details: null,
+              },
+            },
+            { status: 400 },
+          );
+        }
+      }
+      return HttpResponse.json(
+        {
+          success: false,
+          data: null,
+          error: {
+            code: 'INVALID_OR_EXPIRED_OTP',
+            message: 'Mã OTP không chính xác hoặc đã hết hạn',
+            details: null,
+          },
+        },
+        { status: 400 },
+      );
+    }
+    mockPasswordResetOtps.delete(email);
+    return HttpResponse.json({
+      success: true,
+      data: null,
       error: null,
     });
   }),

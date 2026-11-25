@@ -401,7 +401,7 @@ describe('Frontend/Web Audit Regression Suite (001/002 Contract & Security Fixes
     expect(await screen.findByRole('button', { name: /Đăng xuất ngay/i })).toBeInTheDocument();
   });
 
-  it('navigates from Login to ForgotPasswordPage and displays recovery guidance modal', async () => {
+  it('navigates from Login to ForgotPasswordPage and completes 6-digit OTP password reset', async () => {
     const user = userEvent.setup();
     renderApp('/login', null);
 
@@ -409,15 +409,16 @@ describe('Frontend/Web Audit Regression Suite (001/002 Contract & Security Fixes
     expect(await screen.findByRole('heading', { name: /Quên mật khẩu/i })).toBeInTheDocument();
 
     await user.type(screen.getByLabelText(/Email tài khoản đã đăng ký/i), 'hocvien@vnua.edu.vn');
-    await user.click(screen.getByRole('button', { name: /Gửi yêu cầu khôi phục/i }));
+    await user.click(screen.getByRole('button', { name: /Gửi mã OTP khôi phục/i }));
 
-    const dialog = await screen.findByRole('dialog', { name: /Hướng dẫn khôi phục mật khẩu/i });
-    expect(dialog).toHaveTextContent('hocvien@vnua.edu.vn');
-    expect(dialog).toHaveTextContent(/support@lexitag\.vn/i);
+    expect(await screen.findByRole('status')).toHaveTextContent(/OTP 6 chữ số/i);
+    await user.type(screen.getByLabelText(/Mã OTP 6 chữ số/i), '654321');
+    await user.type(screen.getByLabelText(/^Mật khẩu mới$/i), 'NewStrongPass123');
+    await user.type(screen.getByLabelText(/Xác nhận mật khẩu mới/i), 'NewStrongPass123');
+    await user.click(screen.getByRole('button', { name: /Xác nhận đặt lại mật khẩu/i }));
 
-    await user.click(screen.getByRole('button', { name: /Đã hiểu/i }));
-    await user.click(screen.getByRole('link', { name: /Quay lại đăng nhập/i }));
-    expect(await screen.findByRole('button', { name: /^Đăng nhập$/i })).toBeInTheDocument();
+    expect(await screen.findByRole('status')).toHaveTextContent(/Đặt lại mật khẩu thành công/i);
+    expect(screen.getByRole('button', { name: /^Đăng nhập$/i })).toBeInTheDocument();
   });
 
   it('toggles between Light and Dark theme from Topbar and persists in localStorage', async () => {

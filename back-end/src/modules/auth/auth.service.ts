@@ -1,10 +1,13 @@
 import {
   Injectable,
   Inject,
+  Optional,
   ConflictException,
   UnauthorizedException,
   ForbiddenException,
   BadRequestException,
+  HttpException,
+  HttpStatus,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -17,6 +20,7 @@ import { getAuthConfig } from '../../config/auth.config';
 import { REDIS_CLIENT } from '../../config/redis.config';
 import { AuditService } from '../audit/audit.service';
 import { RateLimiterService } from './rate-limiter.service';
+import { PasswordResetMailService } from './password-reset-mail.service';
 import {
   RegisterDto,
   LoginDto,
@@ -24,6 +28,8 @@ import {
   RefreshDto,
   LogoutDto,
   ChangePasswordDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
 } from './dto/auth.dto';
 
 export interface GoogleTokenPayload {
@@ -59,6 +65,7 @@ export class AuthService {
     private readonly rateLimiter: RateLimiterService,
     private readonly auditService: AuditService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    @Optional() private readonly passwordResetMailService?: PasswordResetMailService,
   ) {
     this.googleClient = new OAuth2Client(getAuthConfig().googleClientId);
   }
@@ -738,6 +745,238 @@ export class AuthService {
     await this.auditService.log({
       actorUserId: userId,
       action: 'AUTH_PASSWORD_CHANGED',
+      targetType: 'user',
+      targetId: userId,
+      status: 'SUCCESS',
+      ipAddress,
+    });
+
+    return null;
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto, ipAddress?: string | null) {
+    const email = dto.email.trim().toLowerCase();
+    const ip = ipAddress || 'unknown';
+    const emailRlKey = `auth:pwd_reset_rl:email:${email}`;
+    const ipRlKey = `auth:pwd_reset_rl:ip:${ip}`;
+    const otpKey = `auth:pwd_reset:${email}`;
+
+    let emailCount = 0;
+    let ipCount = 0;
+    try {
+      const [eVal, ipVal] = await this.redis.mget(emailRlKey, ipRlKey);
+      emailCount = eVal ? Number(eVal) : 0;
+      ipCount = ipVal ? Number(ipVal) : 0;
+    } catch {
+      throw new ServiceUnavailableException({
+        code: 'SERVICE_UNAVAILABLE',
+        message: 'Dịch vụ tạm thời gián đoạn, vui lòng thử lại sau ít phút',
+        details: null,
+      });
+    }
+
+    if (emailCount >= 3 || ipCount >= 10) {
+      throw new HttpException(
+        {
+          code: 'RATE_LIMIT_EXCEEDED',
+          message: 'Bạn đã yêu cầu gửi mã OTP quá nhiều lần, vui lòng thử lại sau 15 phút',
+          details: null,
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    try {
+      const pipeline = this.redis.multi();
+      pipeline.incr(emailRlKey);
+      pipeline.expire(emailRlKey, 900, 'NX');
+      pipeline.incr(ipRlKey);
+      pipeline.expire(ipRlKey, 900, 'NX');
+      await pipeline.exec();
+    } catch {
+      throw new ServiceUnavailableException({
+        code: 'SERVICE_UNAVAILABLE',
+        message: 'Dịch vụ tạm thời gián đoạn, vui lòng thử lại sau ít phút',
+        details: null,
+      });
+    }
+
+    const rows = await this.dataSource.query(
+      `SELECT id, email, full_name, is_active FROM users WHERE email = $1 LIMIT 1;`,
+      [email],
+    );
+
+    if (rows.length > 0 && rows[0].is_active) {
+      const user = rows[0];
+      const otp = String(crypto.randomInt(100000, 1000000));
+      const otpHash = this.hashRefreshToken(otp);
+
+      try {
+        await this.redis.set(otpKey, JSON.stringify({ otpHash, attempts: 0 }), 'EX', 600);
+      } catch {
+        throw new ServiceUnavailableException({
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Dịch vụ tạm thời gián đoạn, vui lòng thử lại sau ít phút',
+          details: null,
+        });
+      }
+
+      if (this.passwordResetMailService) {
+        await this.passwordResetMailService.sendPasswordResetOtp(
+          email,
+          String(user.full_name || email),
+          otp,
+        );
+      }
+
+      await this.auditService.log({
+        actorUserId: Number(user.id),
+        action: 'AUTH_PASSWORD_RESET_REQUESTED',
+        targetType: 'user',
+        targetId: Number(user.id),
+        status: 'SUCCESS',
+        ipAddress,
+      });
+    }
+
+    return {
+      message:
+        'Nếu địa chỉ email tồn tại và đang hoạt động, mã OTP 6 chữ số đã được gửi tới hộp thư của bạn (hiệu lực 10 phút).',
+    };
+  }
+
+  async resetPassword(dto: ResetPasswordDto, ipAddress?: string | null) {
+    const email = dto.email.trim().toLowerCase();
+    const otp = dto.otp.trim();
+    const otpKey = `auth:pwd_reset:${email}`;
+    const cfg = getAuthConfig();
+
+    let rawStored: string | null = null;
+    try {
+      rawStored = await this.redis.get(otpKey);
+    } catch {
+      throw new ServiceUnavailableException({
+        code: 'SERVICE_UNAVAILABLE',
+        message: 'Dịch vụ tạm thời gián đoạn, vui lòng thử lại sau ít phút',
+        details: null,
+      });
+    }
+
+    if (!rawStored) {
+      throw new BadRequestException({
+        code: 'INVALID_OR_EXPIRED_OTP',
+        message: 'Mã OTP không chính xác hoặc đã hết hạn',
+        details: null,
+      });
+    }
+
+    let parsed: { otpHash?: string; attempts?: number } = {};
+    try {
+      parsed = JSON.parse(rawStored) as { otpHash?: string; attempts?: number };
+    } catch {
+      await this.redis.del(otpKey);
+      throw new BadRequestException({
+        code: 'INVALID_OR_EXPIRED_OTP',
+        message: 'Mã OTP không chính xác hoặc đã hết hạn',
+        details: null,
+      });
+    }
+
+    const candidateHash = this.hashRefreshToken(otp);
+    if (!parsed.otpHash || candidateHash !== parsed.otpHash) {
+      const nextAttempts = Number(parsed.attempts ?? 0) + 1;
+      if (nextAttempts >= 5) {
+        await this.redis.del(otpKey);
+        throw new BadRequestException({
+          code: 'OTP_MAX_ATTEMPTS_EXCEEDED',
+          message: 'Bạn đã nhập sai mã OTP quá 5 lần. Vui lòng yêu cầu gửi mã mới.',
+          details: null,
+        });
+      }
+      const remainingTtl = await this.redis.ttl(otpKey);
+      const safeTtl = remainingTtl > 0 ? remainingTtl : 600;
+      await this.redis.set(
+        otpKey,
+        JSON.stringify({ otpHash: parsed.otpHash, attempts: nextAttempts }),
+        'EX',
+        safeTtl,
+      );
+      throw new BadRequestException({
+        code: 'INVALID_OR_EXPIRED_OTP',
+        message: 'Mã OTP không chính xác hoặc đã hết hạn',
+        details: null,
+      });
+    }
+
+    const rows = await this.dataSource.query(
+      `SELECT id, token_version, is_active FROM users WHERE email = $1 LIMIT 1;`,
+      [email],
+    );
+    if (rows.length === 0) {
+      await this.redis.del(otpKey);
+      throw new BadRequestException({
+        code: 'INVALID_OR_EXPIRED_OTP',
+        message: 'Mã OTP không chính xác hoặc đã hết hạn',
+        details: null,
+      });
+    }
+
+    const user = rows[0];
+    if (!user.is_active) {
+      await this.redis.del(otpKey);
+      throw new ForbiddenException({
+        code: 'ACCOUNT_DISABLED',
+        message: 'Tài khoản của bạn đã bị khóa bởi quản trị viên',
+        details: null,
+      });
+    }
+
+    // One-time use: consume OTP immediately before updating password
+    await this.redis.del(otpKey);
+
+    const userId = Number(user.id);
+    const newHash = await bcrypt.hash(dto.newPassword, 10);
+    const nextTokenVersion = Number(user.token_version) + 1;
+
+    const qr = this.dataSource.createQueryRunner();
+    await qr.connect();
+    await qr.startTransaction();
+    try {
+      await qr.query(
+        `
+        UPDATE users
+        SET password_hash = $1, token_version = $2, updated_at = NOW()
+        WHERE id = $3;
+        `,
+        [newHash, nextTokenVersion, userId],
+      );
+      await qr.query(
+        `
+        UPDATE refresh_sessions
+        SET is_revoked = TRUE, revoked_at = COALESCE(revoked_at, NOW())
+        WHERE user_id = $1 AND is_revoked = FALSE;
+        `,
+        [userId],
+      );
+      await qr.commitTransaction();
+    } catch (err) {
+      await qr.rollbackTransaction();
+      throw err;
+    } finally {
+      await qr.release();
+    }
+
+    await this.redis.set(
+      `user_token_version:${userId}`,
+      String(nextTokenVersion),
+      'EX',
+      cfg.jwtAccessExpiresIn,
+    );
+    await this.rateLimiter.resetAccountFailures(email);
+
+    await this.auditService.log({
+      actorUserId: userId,
+      action: 'AUTH_PASSWORD_RESET',
       targetType: 'user',
       targetId: userId,
       status: 'SUCCESS',

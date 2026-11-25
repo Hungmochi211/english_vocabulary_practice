@@ -87,3 +87,34 @@ export class ChangePasswordDto {
   })
   newPassword: string;
 }
+
+export class ForgotPasswordDto {
+  @ApiProperty({ example: 'sv01@vnua.edu.vn', maxLength: 255 })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @IsEmail({}, { message: 'email phải là địa chỉ email hợp lệ' })
+  @MaxLength(255)
+  email: string;
+}
+
+export class ResetPasswordDto {
+  @ApiProperty({ example: 'sv01@vnua.edu.vn', maxLength: 255 })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @IsEmail({}, { message: 'email phải là địa chỉ email hợp lệ' })
+  @MaxLength(255)
+  email: string;
+
+  @ApiProperty({ example: '482910', minLength: 6, maxLength: 6 })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @Matches(/^\d{6}$/, { message: 'Mã OTP phải gồm đúng 6 chữ số' })
+  otp: string;
+
+  @ApiProperty({ example: 'NewPassword123', minLength: 8, maxLength: 72 })
+  @IsString()
+  @MinLength(8, { message: 'Mật khẩu mới phải có ít nhất 8 ký tự' })
+  @MaxLength(72, { message: 'Mật khẩu mới tối đa 72 ký tự' })
+  @Matches(PASSWORD_REGEX, {
+    message: 'Mật khẩu mới phải chứa ít nhất 1 chữ cái và 1 chữ số',
+  })
+  newPassword: string;
+}

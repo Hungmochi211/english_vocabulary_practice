@@ -7,6 +7,7 @@ import { RefreshSession } from '../users/entities/refresh-session.entity';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { RateLimiterService } from './rate-limiter.service';
+import { PasswordResetMailService } from './password-reset-mail.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { getAuthConfig } from '../../config/auth.config';
 
@@ -25,7 +26,7 @@ import { getAuthConfig } from '../../config/auth.config';
     TypeOrmModule.forFeature([User, RefreshSession]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, RateLimiterService, JwtStrategy],
+  providers: [AuthService, RateLimiterService, PasswordResetMailService, JwtStrategy],
   exports: [AuthService, JwtModule, PassportModule],
 })
 export class AuthModule {}

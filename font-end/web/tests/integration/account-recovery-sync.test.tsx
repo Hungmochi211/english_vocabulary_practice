@@ -10,6 +10,7 @@ import { ToastProvider } from '@/components/common/CommonUi';
 import { AppRoutes } from '@/app/router';
 import { setStoredSession } from '@/services/api/httpClient';
 import { historyAdapter } from '@/services/adapters/history.adapter';
+import { savedWordsAdapter } from '@/services/adapters/savedWords.adapter';
 import { getMockPasswordResetOtp, mockLearnerUser } from '../mocks/handlers';
 
 function renderApp(initialPath = '/forgot-password') {
@@ -95,5 +96,31 @@ describe('Account Recovery & Server Sync Suite (002/004 Upgrade)', () => {
 
     await user.click(row);
     expect(await screen.findByText('peaceful')).toBeInTheDocument();
+  });
+
+  it('Wave 4 (US6-AS4 / FR-016): syncs Saved Words to server across fresh browser sessions while keeping custom practice optional', async () => {
+    setStoredSession({
+      accessToken: 'mock-access-learner',
+      refreshToken: 'mock-refresh-learner',
+      expiresInSeconds: 900,
+      user: mockLearnerUser,
+    });
+
+    const user = userEvent.setup();
+    const { unmount } = renderApp('/dictionary');
+
+    // Save first displayed word (peaceful) to server
+    const saveBtn = await screen.findByRole('button', { name: /Lưu vào Sổ từ/i });
+    await user.click(saveBtn);
+    expect(await screen.findByRole('button', { name: /Sổ từ đã lưu \(1\)/i })).toBeInTheDocument();
+    unmount();
+
+    // Clear local storage to simulate logging in on a new device
+    savedWordsAdapter.clear();
+    expect(savedWordsAdapter.list()).toHaveLength(0);
+
+    // Reopen /dictionary -> bookmark is restored from GET /vocabularies/saved
+    renderApp('/dictionary');
+    expect(await screen.findByRole('button', { name: /Sổ từ đã lưu \(1\)/i })).toBeInTheDocument();
   });
 });

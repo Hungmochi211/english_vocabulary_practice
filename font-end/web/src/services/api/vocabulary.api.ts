@@ -5,6 +5,7 @@ import type {
   LessonDetail,
   LessonProgressItem,
   PaginatedData,
+  SavedWordRecord,
   Topic,
   VocabularyItem,
 } from '@/types/models';
@@ -159,5 +160,18 @@ export const vocabularyApi = {
       }
       throw err;
     }
+  },
+
+  async listSavedWords(): Promise<SavedWordRecord[]> {
+    const raw = await httpClient.get<SavedWordRecord[]>('/vocabularies/saved');
+    return Array.isArray(raw) ? raw : [];
+  },
+
+  saveWord(vocabularyId: number): Promise<SavedWordRecord> {
+    return httpClient.post<SavedWordRecord>(`/vocabularies/${vocabularyId}/save`);
+  },
+
+  unsaveWord(vocabularyId: number): Promise<null> {
+    return httpClient.delete<null>(`/vocabularies/${vocabularyId}/save`);
   },
 };

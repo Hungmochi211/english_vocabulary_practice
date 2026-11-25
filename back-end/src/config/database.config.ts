@@ -17,6 +17,7 @@ import { UserStreak } from '../modules/gamification/entities/user-streak.entity'
 import { DailyStudyLog } from '../modules/gamification/entities/daily-study-log.entity';
 import { CreateVocabularyCoreTables1700000000001 } from '../database/migrations/1700000000001-CreateVocabularyCoreTables';
 import { CreateCoreLearningTables1700000000002 } from '../database/migrations/1700000000002-CreateCoreLearningTables';
+import { CreateUserSyncAndSupportTables1700000000003 } from '../database/migrations/1700000000003-CreateUserSyncAndSupportTables';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
@@ -45,6 +46,7 @@ export const dataSourceOptions: DataSourceOptions = {
   migrations: [
     CreateVocabularyCoreTables1700000000001,
     CreateCoreLearningTables1700000000002,
+    CreateUserSyncAndSupportTables1700000000003,
   ],
   synchronize: false,
   logging: false,

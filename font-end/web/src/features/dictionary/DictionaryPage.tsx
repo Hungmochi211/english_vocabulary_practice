@@ -77,6 +77,7 @@ export function DictionaryPage() {
   useEffect(() => {
     const syncSaved = () => setSavedRecords(savedWordsAdapter.list());
     window.addEventListener(SAVED_WORDS_EVENT, syncSaved);
+    void savedWordsAdapter.syncFromServer();
     return () => window.removeEventListener(SAVED_WORDS_EVENT, syncSaved);
   }, []);
 

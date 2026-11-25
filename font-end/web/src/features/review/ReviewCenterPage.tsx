@@ -178,6 +178,7 @@ export function ReviewCenterPage() {
   useEffect(() => {
     const syncSaved = () => setSavedWords(savedWordsAdapter.list());
     window.addEventListener(SAVED_WORDS_EVENT, syncSaved);
+    void savedWordsAdapter.syncFromServer();
     return () => window.removeEventListener(SAVED_WORDS_EVENT, syncSaved);
   }, []);
 

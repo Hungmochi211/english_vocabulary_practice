@@ -12,6 +12,7 @@ import type {
   QuizAttemptStart,
   QuizQuestion,
   QuizSubmitResult,
+  SavedWordRecord,
   StatsOverview,
   Topic,
   UserProfile,
@@ -365,9 +366,11 @@ export function resetMockDb(): void {
   mockDb = createInitialMockDb();
   mockPasswordResetOtps.clear();
   mockServerHistory.length = 0;
+  mockServerSavedWords.length = 0;
 }
 
 const mockPasswordResetOtps = new Map<string, { otp: string; attempts: number }>();
+const mockServerSavedWords: SavedWordRecord[] = [];
 const mockServerHistory: Array<{
   id: string;
   attemptId: number;
@@ -873,6 +876,14 @@ export const handlers = [
     });
   }),
 
+  http.get(`${API_BASE}/vocabularies/saved`, async () => {
+    return HttpResponse.json({
+      success: true,
+      data: [...mockServerSavedWords],
+      error: null,
+    });
+  }),
+
   http.get(`${API_BASE}/vocabularies/:id`, async ({ params }) => {
     const vocab = mockVocabularies.find((v) => v.id === Number(params.id));
     if (!vocab) {
@@ -1343,6 +1354,45 @@ export const handlers = [
       },
       error: null,
     });
+  }),
+
+  http.post(`${API_BASE}/vocabularies/:id/save`, async ({ params }) => {
+    const vocabId = Number(params.id);
+    const vocab = mockVocabularies.find((v) => v.id === vocabId);
+    if (!vocab) {
+      return HttpResponse.json(
+        {
+          success: false,
+          data: null,
+          error: { code: 'VOCABULARY_NOT_FOUND', message: 'Từ vựng không tồn tại', details: null },
+        },
+        { status: 404 },
+      );
+    }
+    const existing = mockServerSavedWords.find((item) => item.vocabularyId === vocabId);
+    if (existing) {
+      return HttpResponse.json({ success: true, data: existing, error: null });
+    }
+    const created: SavedWordRecord = {
+      vocabularyId: vocab.id,
+      word: vocab.word,
+      cefrLevel: vocab.cefrLevel,
+      partOfSpeech: vocab.partOfSpeech,
+      phonetic: vocab.phonetic,
+      vietnameseMeaning: vocab.vietnameseMeaning,
+      savedAt: new Date().toISOString(),
+    };
+    mockServerSavedWords.unshift(created);
+    return HttpResponse.json({ success: true, data: created, error: null });
+  }),
+
+  http.delete(`${API_BASE}/vocabularies/:id/save`, async ({ params }) => {
+    const vocabId = Number(params.id);
+    const idx = mockServerSavedWords.findIndex((item) => item.vocabularyId === vocabId);
+    if (idx >= 0) {
+      mockServerSavedWords.splice(idx, 1);
+    }
+    return HttpResponse.json({ success: true, data: null, error: null });
   }),
 
   http.get(`${API_BASE}/learning/history`, async ({ request }) => {

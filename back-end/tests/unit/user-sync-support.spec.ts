@@ -2,6 +2,7 @@ import { DataSource } from 'typeorm';
 import { LearningService } from '../../src/modules/learning/learning.service';
 import { DistractorService } from '../../src/modules/algorithm/distractor.service';
 import { StratifiedSamplingService } from '../../src/modules/algorithm/stratified-sampling.service';
+import { VocabularyService } from '../../src/modules/vocabulary/services/vocabulary.service';
 
 describe('User Sync & Support Services Unit Suite (US6 — FR-017..FR-020)', () => {
   it('US6-AS3 (History): returns submitted quiz attempts with graded word breakdown isolated by userId', async () => {
@@ -79,5 +80,64 @@ describe('User Sync & Support Services Unit Suite (US6 — FR-017..FR-020)', () 
     expect(res.items[0].words).toHaveLength(2);
     expect(res.items[0].words[0].ok).toBe(true);
     expect(res.items[0].words[1].ok).toBe(false);
+  });
+
+  it('US6-AS4 (Saved Words): saves idempotently, lists by userId, and unsaves cleanly', async () => {
+    const saved = new Map<string, { userId: number; vocabularyId: number; savedAt: string }>();
+    const dataSourceMock = {
+      query: jest.fn(async (sql: string, params?: unknown[]) => {
+        if (sql.includes('WHERE v.id = $1')) {
+          if (params?.[0] === 101) {
+            return [
+              {
+                id: 101,
+                word: 'peaceful',
+                cefrLevel: 'A1',
+                partOfSpeech: 'adj.',
+                phonetic: '/ˈpiːsfl/',
+                vietnameseMeaning: 'yên bình',
+              },
+            ];
+          }
+          return [];
+        }
+        if (sql.includes('INSERT INTO user_saved_words')) {
+          const userId = Number(params?.[0]);
+          const vocabularyId = Number(params?.[1]);
+          const key = `${userId}:${vocabularyId}`;
+          const savedAt = saved.get(key)?.savedAt ?? '2026-11-25T06:00:00.000Z';
+          saved.set(key, { userId, vocabularyId, savedAt });
+          return [{ savedAt }];
+        }
+        if (sql.includes('FROM user_saved_words sw')) {
+          const userId = Number(params?.[0]);
+          return Array.from(saved.values())
+            .filter((r) => r.userId === userId)
+            .map((r) => ({
+              vocabularyId: r.vocabularyId,
+              word: 'peaceful',
+              cefrLevel: 'A1',
+              partOfSpeech: 'adj.',
+              phonetic: '/ˈpiːsfl/',
+              vietnameseMeaning: 'yên bình',
+              savedAt: r.savedAt,
+            }));
+        }
+        if (sql.includes('DELETE FROM user_saved_words')) {
+          saved.delete(`${params?.[0]}:${params?.[1]}`);
+          return [];
+        }
+        return [];
+      }),
+    } as unknown as DataSource;
+
+    const service = new VocabularyService(dataSourceMock);
+    await service.saveWord(10, 101);
+    await service.saveWord(10, 101); // duplicate save is idempotent
+    expect(await service.listSavedWords(10)).toHaveLength(1);
+    expect(await service.listSavedWords(99)).toHaveLength(0); // isolated by userId
+
+    await service.unsaveWord(10, 101);
+    expect(await service.listSavedWords(10)).toHaveLength(0);
   });
 });

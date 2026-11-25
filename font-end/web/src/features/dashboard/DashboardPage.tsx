@@ -62,7 +62,7 @@ export function DashboardPage() {
 
   if (overviewQuery.isError) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 p-5 sm:p-6">
         <h1 className="font-heading text-2xl font-extrabold text-slate-900">Bảng điều khiển Trang chủ</h1>
         <ErrorRetryBox
           message="Không thể tải dữ liệu tổng quan học tập. Vui lòng thử lại."
@@ -76,32 +76,34 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-[calc(100vh-4rem)] w-full bg-[#f8fafc]">
       {deniedAdmin && (
-        <div
-          role="alert"
-          className="flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-900"
-        >
-          <span className="flex items-center gap-2">
-            <ShieldAlert className="h-4 w-4 shrink-0 text-amber-600" />
-            <span>Bạn không có quyền truy cập khu vực dành cho Quản trị viên.</span>
-          </span>
-          <button
-            type="button"
-            aria-label="Đóng thông báo quyền truy cập"
-            onClick={() => {
-              searchParams.delete('denied');
-              setSearchParams(searchParams, { replace: true });
-            }}
-            className="rounded-lg p-1 text-amber-700 hover:bg-amber-100"
+        <div className="px-5 pt-4 sm:px-7">
+          <div
+            role="alert"
+            className="flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-900"
           >
-            <X className="h-4 w-4" />
-          </button>
+            <span className="flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4 shrink-0 text-amber-600" />
+              <span>Bạn không có quyền truy cập khu vực dành cho Quản trị viên.</span>
+            </span>
+            <button
+              type="button"
+              aria-label="Đóng thông báo quyền truy cập"
+              onClick={() => {
+                searchParams.delete('denied');
+                setSearchParams(searchParams, { replace: true });
+              }}
+              className="rounded-lg p-1 text-amber-700 hover:bg-amber-100"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       )}
 
       {/* Hero Banner + Daily Goal Ring */}
-      <section className="rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50/90 via-white to-slate-50 p-6 shadow-xs sm:p-7">
+      <section className="px-5 pt-6 pb-2 sm:px-7 sm:pt-7">
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
           <div className="space-y-2">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-white px-3 py-1 text-xs font-bold text-indigo-700">
@@ -136,7 +138,7 @@ export function DashboardPage() {
           <div className="flex items-center gap-4 self-start rounded-2xl border border-slate-200/80 bg-white px-5 py-4 shadow-2xs md:self-auto">
             <div className="relative flex h-24 w-24 items-center justify-center">
               <svg className="h-24 w-24 -rotate-90" viewBox="0 0 88 88" aria-hidden="true">
-                <circle cx="44" cy="44" r={ringRadius} fill="none" stroke="#e2e8f0" strokeWidth="8" />
+                <circle cx="44" cy="44" r={ringRadius} fill="none" stroke="var(--border-color)" strokeWidth="8" />
                 <circle
                   cx="44"
                   cy="44"
@@ -159,15 +161,18 @@ export function DashboardPage() {
                 {wordsToday} / {dailyWordGoal} từ
               </p>
               <p className="mt-0.5 text-xs text-slate-500">
-                {overview?.completedToday ? 'Đã hoàn thành mục tiêu hôm nay!' : 'Học thêm để giữ chuỗi Streak'}
+                {overview?.completedToday
+                  ? 'Đã hoàn thành mục tiêu hôm nay!'
+                  : 'Đạt trên 80% một bài Thực hành hoặc hoàn thành Ôn tập để tăng Streak'}
               </p>
             </div>
           </div>
         </div>
-      </section>
+        </section>
 
-      {/* 4 Synced KPI Cards */}
-      <section aria-label="Chỉ số học tập" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="space-y-5 px-5 pt-4 pb-6 sm:px-7">
+          {/* 4 Synced KPI Cards */}
+          <section aria-label="Chỉ số học tập" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {overviewQuery.isLoading ? (
           Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="rounded-2xl border border-slate-200 bg-white p-5">
@@ -328,11 +333,12 @@ export function DashboardPage() {
         </section>
       </div>
 
-      {/* Weekly Group Leaderboard */}
-      <WeeklyLeaderboardWidget
-        totalXp={overview?.totalXp ?? 0}
-        currentStreak={overview?.currentStreak ?? 0}
-      />
+          {/* Weekly Group Leaderboard */}
+          <WeeklyLeaderboardWidget
+            totalXp={overview?.totalXp ?? 0}
+            currentStreak={overview?.currentStreak ?? 0}
+          />
+        </div>
     </div>
   );
 }

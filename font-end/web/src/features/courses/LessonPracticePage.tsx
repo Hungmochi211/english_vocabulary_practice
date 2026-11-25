@@ -391,7 +391,7 @@ export function LessonPracticePage() {
 
             {currentQuestion.practiceMode === 'dictation' && (
               <AudioPlayerControls
-                word={currentQuestion.prompt.word ?? currentQuestion.prompt.vietnameseMeaning ?? ''}
+                word={currentQuestion.prompt.word ?? ''}
                 audioUrl={currentQuestion.prompt.audioUrl}
               />
             )}

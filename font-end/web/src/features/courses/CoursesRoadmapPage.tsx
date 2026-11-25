@@ -35,8 +35,8 @@ export function CoursesRoadmapPage() {
   const lessons = lessonsQuery.data ?? [];
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xs sm:flex-row sm:items-center">
+    <div className="min-h-[calc(100vh-4rem)] w-full bg-[#f8fafc]">
+      <header className="flex flex-col justify-between gap-4 px-5 pt-6 pb-2 sm:flex-row sm:items-center sm:px-7 sm:pt-7">
         <div>
           <h1 className="font-heading text-2xl font-extrabold text-slate-900">Khóa học & Lộ trình học</h1>
           <p className="mt-1 text-sm text-slate-600">
@@ -49,7 +49,8 @@ export function CoursesRoadmapPage() {
         </span>
       </header>
 
-      {/* Filter Bar: CEFR + Topic */}
+      <div className="space-y-5 px-5 pt-4 pb-6 sm:px-7">
+        {/* Filter Bar: CEFR + Topic */}
       <section className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Lọc theo trình độ">
           {CEFR_OPTIONS.map((opt) => {
@@ -239,6 +240,7 @@ export function CoursesRoadmapPage() {
           })}
         </div>
       )}
+      </div>
     </div>
   );
 }

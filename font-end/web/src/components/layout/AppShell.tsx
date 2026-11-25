@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   BookOpen,
@@ -21,14 +21,13 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/app/AuthProvider';
 import { useTheme } from '@/app/ThemeProvider';
-import { httpClient } from '@/services/api/httpClient';
+import { statsApi } from '@/services/api/stats.api';
 import { formatXp, getInitials } from '@/utils/formatters';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { LogoutModal } from '@/features/auth/LogoutModal';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { AccountMenu } from '@/components/layout/AccountMenu';
 import { FloatingSupportWidget } from '@/components/support/FloatingSupportWidget';
-import type { StatsOverview } from '@/types/models';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Trang chủ', icon: Home, end: true },
@@ -40,10 +39,14 @@ const NAV_ITEMS = [
   { to: '/profile', label: 'Trang cá nhân', icon: User },
 ];
 
+const FULL_BLEED_PATHS = new Set(['/', '/courses', '/review', '/dictionary', '/ai-chat', '/history']);
+
 export function AppShell() {
   const { user, isAdmin, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isFullBleedPage = FULL_BLEED_PATHS.has(location.pathname);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
@@ -52,7 +55,7 @@ export function AppShell() {
 
   const { data: overview } = useQuery({
     queryKey: ['stats', 'overview'],
-    queryFn: () => httpClient.get<StatsOverview>('/stats/overview'),
+    queryFn: () => statsApi.getOverview(),
   });
 
   useKeyboardShortcuts({
@@ -292,7 +295,13 @@ export function AppShell() {
           </div>
         </header>
 
-        <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+        <main
+          className={
+            isFullBleedPage
+              ? 'min-h-[calc(100vh-4rem)] w-full'
+              : 'mx-auto max-w-6xl px-4 py-6 sm:px-6'
+          }
+        >
           <Outlet />
         </main>
       </div>

@@ -56,16 +56,33 @@ export function loadGoogleIdentityApi(): Promise<GoogleAccountsIdApi> {
   scriptLoadPromise = new Promise<GoogleAccountsIdApi>((resolve, reject) => {
     const existingScript = document.getElementById(GIS_SCRIPT_ID) as HTMLScriptElement | null;
     if (existingScript) {
-      existingScript.addEventListener('load', () => {
-        const api = window.google?.accounts?.id;
-        if (api) resolve(api);
-        else reject(new Error('Google Identity Services failed to initialize.'));
-      });
-      existingScript.addEventListener('error', () => {
-        scriptLoadPromise = null;
-        reject(new Error('Không thể tải Google Sign-In SDK.'));
-      });
-      return;
+      if (existingScript.dataset.loadState === 'loading') {
+        existingScript.addEventListener(
+          'load',
+          () => {
+            const api = window.google?.accounts?.id;
+            if (api) {
+              resolve(api);
+            } else {
+              scriptLoadPromise = null;
+              existingScript.remove();
+              reject(new Error('Google Identity Services failed to initialize.'));
+            }
+          },
+          { once: true },
+        );
+        existingScript.addEventListener(
+          'error',
+          () => {
+            scriptLoadPromise = null;
+            existingScript.remove();
+            reject(new Error('Không thể tải Google Sign-In SDK.'));
+          },
+          { once: true },
+        );
+        return;
+      }
+      existingScript.remove();
     }
 
     const script = document.createElement('script');
@@ -73,17 +90,21 @@ export function loadGoogleIdentityApi(): Promise<GoogleAccountsIdApi> {
     script.src = GIS_SCRIPT_SRC;
     script.async = true;
     script.defer = true;
+    script.dataset.loadState = 'loading';
     script.onload = () => {
       const api = window.google?.accounts?.id;
       if (api) {
+        script.dataset.loadState = 'loaded';
         resolve(api);
       } else {
         scriptLoadPromise = null;
+        script.remove();
         reject(new Error('Google Identity Services failed to initialize.'));
       }
     };
     script.onerror = () => {
       scriptLoadPromise = null;
+      script.remove();
       reject(new Error('Không thể tải Google Sign-In SDK.'));
     };
     document.head.appendChild(script);

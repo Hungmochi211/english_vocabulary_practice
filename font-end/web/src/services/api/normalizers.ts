@@ -61,7 +61,7 @@ export function normalizeAuthSession(raw: AuthSession & { expiresIn?: number }):
 export function normalizeTopic(raw: Topic & { code?: string; nameVi?: string; totalLessons?: number }): Topic {
   return {
     id: Number(raw.id),
-    name: raw.name ?? raw.nameVi ?? '',
+    name: raw.nameVi?.trim() || raw.name || '',
     slug: raw.slug ?? raw.code ?? String(raw.id),
     description: raw.description ?? null,
     lessonCount: raw.lessonCount ?? raw.totalLessons,
@@ -73,9 +73,17 @@ export function normalizeLessonProgress(
     id?: number;
     topicNameVi?: string;
     totalWords?: number;
+    attemptsCount?: number;
   },
   fallbackLessonId?: number,
 ): LessonProgressItem {
+  const isCompleted = Boolean(raw.isCompleted);
+  const attemptsCount = raw.attemptsCount !== undefined ? Number(raw.attemptsCount) : undefined;
+  const hasAttempted =
+    attemptsCount !== undefined
+      ? attemptsCount > 0
+      : isCompleted || (typeof raw.bestScore === 'number' && raw.bestScore > 0);
+
   return {
     lessonId: Number(raw.lessonId ?? raw.id ?? fallbackLessonId ?? 0),
     title: raw.title ?? '',
@@ -87,8 +95,11 @@ export function normalizeLessonProgress(
     openedCount: Number(raw.openedCount ?? 0),
     isUnlocked: raw.isUnlocked ?? true,
     acquisitionCompleted: Boolean(raw.acquisitionCompleted),
-    isCompleted: Boolean(raw.isCompleted),
-    bestScore: raw.bestScore ?? null,
+    isCompleted,
+    bestScore:
+      raw.bestScore === null || raw.bestScore === undefined || !hasAttempted
+        ? null
+        : Number(raw.bestScore),
   };
 }
 

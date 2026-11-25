@@ -85,8 +85,8 @@ export function AiChatPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <header className="flex flex-col justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs sm:flex-row sm:items-center">
+    <div className="min-h-[calc(100vh-4rem)] w-full bg-[#f8fafc]">
+      <header className="flex flex-col justify-between gap-3 px-5 pt-6 pb-2 sm:flex-row sm:items-center sm:px-7 sm:pt-7">
         <div>
           <h1 className="font-heading text-2xl font-extrabold text-slate-900">
             Trợ lý AI Học Từ Vựng
@@ -101,7 +101,8 @@ export function AiChatPage() {
         </span>
       </header>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+      <div className="px-5 pt-4 pb-6 sm:px-7">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
         {/* Left: Conversation List */}
         <aside className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs lg:col-span-4">
           <button
@@ -250,6 +251,7 @@ export function AiChatPage() {
             </button>
           </form>
         </section>
+      </div>
       </div>
     </div>
   );

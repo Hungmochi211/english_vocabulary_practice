@@ -58,40 +58,62 @@ export const rawAxios = axios.create({
 });
 
 let refreshPromise: Promise<AuthSession> | null = null;
+const AUTH_REFRESH_LOCK_NAME = 'lexitag:auth:refresh';
 
 async function performSingleFlightRefresh(): Promise<AuthSession> {
   if (refreshPromise) return refreshPromise;
 
-  const current = getStoredSession();
-  if (!current?.refreshToken) {
+  const initialSession = getStoredSession();
+  if (!initialSession?.refreshToken) {
     throw new ApiError(401, 'UNAUTHORIZED', 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
   }
+  const initialRefreshToken = initialSession.refreshToken;
 
-  refreshPromise = axios
-    .post<ApiResponse<AuthSession>>(
+  const executeRefresh = async (): Promise<AuthSession> => {
+    const latest = getStoredSession();
+    if (!latest?.refreshToken) {
+      throw new ApiError(401, 'UNAUTHORIZED', 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+    }
+    if (latest.refreshToken !== initialRefreshToken && latest.accessToken) {
+      return latest;
+    }
+
+    const res = await axios.post<ApiResponse<AuthSession>>(
       `${API_BASE_URL}/auth/refresh`,
-      { refreshToken: current.refreshToken },
+      { refreshToken: latest.refreshToken },
       { headers: { 'Content-Type': 'application/json' }, timeout: 15000 },
-    )
-    .then((res) => {
-      const payload = res.data;
-      if (!payload?.success || !payload.data?.accessToken) {
-        throw new ApiError(
-          401,
-          payload?.error?.code || 'UNAUTHORIZED',
-          payload?.error?.message || 'Không thể làm mới phiên đăng nhập.',
-          payload?.error?.details ?? null,
-        );
-      }
-      const normalized = normalizeAuthSession(
-        payload.data as AuthSession & { expiresIn?: number },
+    );
+    const payload = res.data;
+    if (!payload?.success || !payload.data?.accessToken) {
+      throw new ApiError(
+        401,
+        payload?.error?.code || 'UNAUTHORIZED',
+        payload?.error?.message || 'Không thể làm mới phiên đăng nhập.',
+        payload?.error?.details ?? null,
       );
-      setStoredSession(normalized);
-      return normalized;
-    })
-    .finally(() => {
-      refreshPromise = null;
-    });
+    }
+    const normalized = normalizeAuthSession(
+      payload.data as AuthSession & { expiresIn?: number },
+    );
+    setStoredSession(normalized);
+    return normalized;
+  };
+
+  const lockManager =
+    typeof navigator !== 'undefined' && typeof navigator.locks?.request === 'function'
+      ? navigator.locks
+      : null;
+
+  const runWithLock = async (): Promise<AuthSession> => {
+    if (lockManager) {
+      return (await lockManager.request(AUTH_REFRESH_LOCK_NAME, executeRefresh)) as AuthSession;
+    }
+    return executeRefresh();
+  };
+
+  refreshPromise = runWithLock().finally(() => {
+    refreshPromise = null;
+  });
 
   return refreshPromise;
 }

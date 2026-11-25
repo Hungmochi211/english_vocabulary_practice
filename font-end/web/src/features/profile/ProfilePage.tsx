@@ -110,14 +110,20 @@ export function ProfilePage() {
   );
   const dirtyRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [dailyGoal, setDailyGoal] = useState<number>(() => {
+  const [dailyGoalInput, setDailyGoalInput] = useState<string>(() => {
     try {
       const saved = Number(window.localStorage.getItem(DAILY_GOAL_STORAGE_KEY));
-      return saved >= 5 && saved <= 100 ? saved : 15;
+      return String(saved >= 5 && saved <= 100 ? saved : 15);
     } catch {
-      return 15;
+      return '15';
     }
   });
+
+  function clampDailyGoal(raw: string): number {
+    const parsed = Math.round(Number(raw));
+    if (!Number.isFinite(parsed) || raw.trim() === '') return 15;
+    return Math.min(100, Math.max(5, parsed));
+  }
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
 
@@ -183,8 +189,10 @@ export function ProfilePage() {
         emailReminderEnabled,
       }),
     onSuccess: (updated) => {
+      const clampedGoal = clampDailyGoal(dailyGoalInput);
+      setDailyGoalInput(String(clampedGoal));
       try {
-        window.localStorage.setItem(DAILY_GOAL_STORAGE_KEY, String(dailyGoal));
+        window.localStorage.setItem(DAILY_GOAL_STORAGE_KEY, String(clampedGoal));
       } catch {
         // ignore
       }
@@ -488,8 +496,12 @@ export function ProfilePage() {
                 type="number"
                 min={5}
                 max={100}
-                value={dailyGoal}
-                onChange={(e) => setDailyGoal(Number(e.target.value) || 15)}
+                value={dailyGoalInput}
+                onChange={(e) => {
+                  dirtyRef.current = true;
+                  setDailyGoalInput(e.target.value);
+                }}
+                onBlur={() => setDailyGoalInput(String(clampDailyGoal(dailyGoalInput)))}
                 className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-indigo-500"
               />
             </div>
@@ -503,7 +515,10 @@ export function ProfilePage() {
             <input
               type="checkbox"
               checked={emailReminderEnabled}
-              onChange={(e) => setEmailReminderEnabled(e.target.checked)}
+              onChange={(e) => {
+                dirtyRef.current = true;
+                setEmailReminderEnabled(e.target.checked);
+              }}
               className="h-4 w-4 accent-indigo-600"
             />
           </label>

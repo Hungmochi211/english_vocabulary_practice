@@ -1,9 +1,10 @@
-import { useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { ArrowLeft, BookOpen, CheckCircle2, KeyRound, Lock, Mail, RefreshCw, Send } from 'lucide-react';
 import { useAuth } from '@/app/AuthProvider';
 import { authApi } from '@/services/api/auth.api';
+import { useTheme } from '@/app/ThemeProvider';
 import { ApiError } from '@/services/api/httpClient';
 import { loadGoogleIdentityApi } from '@/utils/googleIdentity';
 
@@ -33,6 +34,7 @@ const resetSchema = z
 
 export function ForgotPasswordPage() {
   const { loginWithGoogle } = useAuth();
+  const { isDark } = useTheme();
   const navigate = useNavigate();
 
   const [step, setStep] = useState<'request' | 'verify'>('request');
@@ -46,11 +48,80 @@ export function ForgotPasswordPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submittingGoogle, setSubmittingGoogle] = useState(false);
-
+  const [gisReady, setGisReady] = useState(false);
+  const googleButtonContainerRef = useRef<HTMLDivElement | null>(null);
   const isTestMode = import.meta.env?.MODE === 'test';
+  const allowDemoGoogleFallback = isTestMode || import.meta.env?.VITE_ENABLE_MSW === 'true';
   const googleClientId = isTestMode
     ? ''
     : ((import.meta.env?.VITE_GOOGLE_CLIENT_ID as string | undefined) || '').trim();
+
+  const handleGoogleCredential = useCallback(
+    async (idToken: string) => {
+      setFieldError(null);
+      setServerError(null);
+      setSubmittingGoogle(true);
+      try {
+        await loginWithGoogle(idToken);
+        navigate('/', { replace: true });
+      } catch (err) {
+        if (err instanceof ApiError) {
+          setServerError(err.message);
+        } else {
+          setServerError('Đăng nhập Google thất bại. Vui lòng thử lại.');
+        }
+      } finally {
+        setSubmittingGoogle(false);
+      }
+    },
+    [loginWithGoogle, navigate],
+  );
+
+  useEffect(() => {
+    if (!googleClientId) {
+      setGisReady(false);
+      return;
+    }
+
+    let cancelled = false;
+    loadGoogleIdentityApi()
+      .then((gsi) => {
+        if (cancelled) return;
+        gsi.initialize({
+          client_id: googleClientId,
+          callback: (response) => {
+            if (response.credential) {
+              void handleGoogleCredential(response.credential);
+            } else {
+              setServerError('Không nhận được mã xác thực từ Google. Vui lòng thử lại.');
+            }
+          },
+        });
+        if (googleButtonContainerRef.current) {
+          const containerWidth = Math.max(
+            220,
+            Math.min(360, Math.floor(googleButtonContainerRef.current.clientWidth || 300)),
+          );
+          googleButtonContainerRef.current.innerHTML = '';
+          gsi.renderButton(googleButtonContainerRef.current, {
+            theme: isDark ? 'filled_black' : 'outline',
+            size: 'large',
+            text: 'continue_with',
+            shape: 'rectangular',
+            width: containerWidth,
+            locale: 'vi',
+          });
+          setGisReady(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setGisReady(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [googleClientId, handleGoogleCredential, isDark]);
 
   async function handleRequestOtp(e: FormEvent) {
     e.preventDefault();
@@ -149,20 +220,11 @@ export function ForgotPasswordPage() {
       }
       return;
     }
-
-    setSubmittingGoogle(true);
-    try {
-      await loginWithGoogle('demo-google-id-token');
-      navigate('/', { replace: true });
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setServerError(err.message);
-      } else {
-        setServerError('Đăng nhập Google thất bại. Vui lòng thử lại.');
-      }
-    } finally {
-      setSubmittingGoogle(false);
+    if (allowDemoGoogleFallback) {
+      await handleGoogleCredential('demo-google-id-token');
+      return;
     }
+    setServerError('Đăng nhập Google chưa được cấu hình. Vui lòng đăng nhập bằng email và mật khẩu.');
   }
 
   return (
@@ -330,14 +392,23 @@ export function ForgotPasswordPage() {
           <div className="h-px flex-1 bg-slate-200" />
         </div>
 
-        <button
-          type="button"
-          onClick={() => void handleGoogleLogin()}
-          disabled={submitting || submittingGoogle}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
-        >
-          <span>{submittingGoogle ? 'Đang đăng nhập...' : 'Đăng nhập bằng Google'}</span>
-        </button>
+        {googleClientId && (
+          <div
+            ref={googleButtonContainerRef}
+            className={gisReady ? 'flex max-w-full justify-center overflow-hidden' : 'hidden'}
+          />
+        )}
+
+        {(!googleClientId || !gisReady) && (
+          <button
+            type="button"
+            onClick={() => void handleGoogleLogin()}
+            disabled={submitting || submittingGoogle}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+          >
+            <span>{submittingGoogle ? 'Đang đăng nhập...' : 'Đăng nhập bằng Google'}</span>
+          </button>
+        )}
 
         <p className="mt-5 text-center text-sm text-slate-500">
           <Link

@@ -70,6 +70,7 @@ export function QuizQuestionStage({
             <button
               key={opt}
               type="button"
+              data-allow-enter-shortcut="true"
               onClick={() => onSelect(opt)}
               aria-pressed={active}
               className={`flex items-start gap-2.5 rounded-xl border px-4 py-3.5 text-left text-sm font-semibold transition ${

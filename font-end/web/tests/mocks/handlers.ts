@@ -545,7 +545,7 @@ function buildQuestion(vocab: VocabularyItem, mode: QuizQuestion['practiceMode']
     vocabularyId: vocab.id,
     practiceMode: mode,
     prompt: {
-      word: mode === 'multiple_choice' ? vocab.word : undefined,
+      word: mode === 'multiple_choice' || mode === 'dictation' ? vocab.word : undefined,
       phonetic: vocab.phonetic,
       partOfSpeech: vocab.partOfSpeech,
       cefrLevel: vocab.cefrLevel,

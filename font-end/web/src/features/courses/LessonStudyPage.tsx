@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -50,6 +50,14 @@ export function LessonStudyPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [openedIds, setOpenedIds] = useState<number[]>([]);
+  const completedRecordedRef = useRef(false);
+
+  useEffect(() => {
+    setCurrentIndex(0);
+    setIsFlipped(false);
+    setOpenedIds([]);
+    completedRecordedRef.current = false;
+  }, [lessonId]);
 
   const detailQuery = useQuery({
     queryKey: ['lessons', 'detail', lessonId],
@@ -69,6 +77,12 @@ export function LessonStudyPage() {
   );
 
   useEffect(() => {
+    if (serverLessonProgress?.acquisitionCompleted) {
+      completedRecordedRef.current = true;
+    }
+  }, [serverLessonProgress?.acquisitionCompleted]);
+
+  useEffect(() => {
     if (detailQuery.data?.openedVocabularyIds) {
       setOpenedIds(detailQuery.data.openedVocabularyIds);
     }
@@ -79,7 +93,12 @@ export function LessonStudyPage() {
     onSuccess: (updatedLesson, vocabularyId) => {
       setOpenedIds((prev) => (prev.includes(vocabularyId) ? prev : [...prev, vocabularyId]));
       void queryClient.invalidateQueries({ queryKey: ['learning', 'lessons'] });
-      if (updatedLesson.acquisitionCompleted) {
+      if (
+        updatedLesson.acquisitionCompleted &&
+        !completedRecordedRef.current &&
+        !serverLessonProgress?.acquisitionCompleted
+      ) {
+        completedRecordedRef.current = true;
         showToast('Bạn đã mở đủ 100% thẻ từ! Có thể chuyển sang Thực hành Bước 2.', 'success');
         historyAdapter.record({
           type: 'study',

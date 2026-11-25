@@ -521,7 +521,13 @@ export function ReviewCenterPage() {
   function handleSrsRate(rating: 1 | 2 | 3 | 4) {
     if (!session || !currentQuestion) return;
     const targetWord = session.targetWordsByVocabId[currentQuestion.vocabularyId] ?? '';
-    const mappedAnswer = rating >= 3 ? targetWord : '';
+    const expectedPositiveAnswer =
+      session.origin === 'server_official' && currentQuestion.practiceMode === 'multiple_choice'
+        ? currentQuestion.prompt.vietnameseMeaning ||
+          session.dueLookup[currentQuestion.vocabularyId]?.vietnameseMeaning ||
+          targetWord
+        : targetWord;
+    const mappedAnswer = rating >= 3 ? expectedPositiveAnswer : '';
     const updatedAnswers = { ...answers, [currentQuestion.vocabularyId]: mappedAnswer };
     setAnswers(updatedAnswers);
 
@@ -537,7 +543,7 @@ export function ReviewCenterPage() {
   if (summary && session) {
     const missedResults = summary.results.filter((item) => item.gradingStatus !== 'exact');
     return (
-      <div className="mx-auto max-w-3xl space-y-6">
+      <div className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-6">
         <section className="rounded-3xl border border-indigo-100 bg-white p-6 text-center shadow-xs sm:p-8">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-600 text-white">
             <Award className="h-7 w-7" />
@@ -633,13 +639,18 @@ export function ReviewCenterPage() {
   if (session && currentQuestion) {
     const isLast = currentIndex >= session.questions.length - 1;
     const effectiveMode: ReviewUiMode =
-      session.uiMode === 'mixed'
-        ? currentQuestion.practiceMode === 'multiple_choice'
-          ? 'quiz'
-          : currentQuestion.practiceMode === 'dictation'
-            ? 'dictation'
-            : 'typing'
-        : session.uiMode;
+      session.origin === 'server_official' &&
+      session.uiMode !== 'srs' &&
+      currentQuestion.practiceMode === 'multiple_choice' &&
+      Boolean(currentQuestion.prompt.options?.length)
+        ? 'quiz'
+        : session.uiMode === 'mixed'
+          ? currentQuestion.practiceMode === 'multiple_choice'
+            ? 'quiz'
+            : currentQuestion.practiceMode === 'dictation'
+              ? 'dictation'
+              : 'typing'
+          : session.uiMode;
 
     const currentDueItem = session.dueLookup[currentQuestion.vocabularyId];
     const spokenText =
@@ -649,7 +660,7 @@ export function ReviewCenterPage() {
       '';
 
     return (
-      <div className="mx-auto max-w-2xl space-y-5">
+      <div className="mx-auto max-w-2xl space-y-5 px-4 py-6 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4">
           <div>
             <h1 className="font-heading text-lg font-extrabold text-slate-900">{session.title}</h1>
@@ -808,8 +819,8 @@ export function ReviewCenterPage() {
 
   // Review Center Landing Screen
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xs sm:flex-row sm:items-center">
+    <div className="min-h-[calc(100vh-4rem)] w-full bg-[#f8fafc]">
+      <header className="flex flex-col justify-between gap-4 px-5 pt-6 pb-2 sm:flex-row sm:items-center sm:px-7 sm:pt-7">
         <div>
           <h1 className="font-heading text-2xl font-extrabold text-slate-900">Trung tâm Ôn tập</h1>
           <p className="mt-1 text-sm text-slate-600">
@@ -842,6 +853,8 @@ export function ReviewCenterPage() {
           </button>
         </div>
       </header>
+
+      <div className="space-y-5 px-5 pt-4 pb-6 sm:px-7">
 
       {dueQuery.isError ? (
         <ErrorRetryBox
@@ -945,6 +958,7 @@ export function ReviewCenterPage() {
           )}
         </>
       )}
+      </div>
     </div>
   );
 }

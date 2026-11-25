@@ -158,7 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [persistSession, queryClient]);
 
   const logout = useCallback(async () => {
-    const refreshToken = session?.refreshToken;
+    const refreshToken = getStoredSession()?.refreshToken ?? session?.refreshToken;
     try {
       await authApi.logout(refreshToken);
     } catch {

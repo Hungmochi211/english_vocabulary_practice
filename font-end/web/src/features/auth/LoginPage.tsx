@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { BookOpen, LogIn, Mail, Lock } from 'lucide-react';
 import { useAuth } from '@/app/AuthProvider';
+import { useTheme } from '@/app/ThemeProvider';
 import { ApiError } from '@/services/api/httpClient';
 import { loadGoogleIdentityApi } from '@/utils/googleIdentity';
 
@@ -43,6 +44,7 @@ function getReasonNotice(reason: string | null): { tone: 'error' | 'info'; messa
 
 export function LoginPage() {
   const { login, loginWithGoogle } = useAuth();
+  const { isDark } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
@@ -59,6 +61,7 @@ export function LoginPage() {
   const [gisReady, setGisReady] = useState(false);
   const googleButtonContainerRef = useRef<HTMLDivElement | null>(null);
   const isTestMode = import.meta.env?.MODE === 'test';
+  const allowDemoGoogleFallback = isTestMode || import.meta.env?.VITE_ENABLE_MSW === 'true';
   const googleClientId = isTestMode
     ? ''
     : ((import.meta.env?.VITE_GOOGLE_CLIENT_ID as string | undefined) || '').trim();
@@ -105,13 +108,17 @@ export function LoginPage() {
           },
         });
         if (googleButtonContainerRef.current) {
+          const containerWidth = Math.max(
+            220,
+            Math.min(360, Math.floor(googleButtonContainerRef.current.clientWidth || 300)),
+          );
           googleButtonContainerRef.current.innerHTML = '';
           gsi.renderButton(googleButtonContainerRef.current, {
-            theme: 'outline',
+            theme: isDark ? 'filled_black' : 'outline',
             size: 'large',
             text: 'continue_with',
             shape: 'rectangular',
-            width: 360,
+            width: containerWidth,
             locale: 'vi',
           });
           setGisReady(true);
@@ -124,7 +131,7 @@ export function LoginPage() {
     return () => {
       cancelled = true;
     };
-  }, [googleClientId, handleGoogleCredential]);
+  }, [googleClientId, handleGoogleCredential, isDark]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -162,7 +169,11 @@ export function LoginPage() {
       }
       return;
     }
-    await handleGoogleCredential('demo-google-id-token');
+    if (allowDemoGoogleFallback) {
+      await handleGoogleCredential('demo-google-id-token');
+      return;
+    }
+    setServerError('Đăng nhập Google chưa được cấu hình. Vui lòng đăng nhập bằng email và mật khẩu.');
   }
 
   return (
@@ -260,7 +271,7 @@ export function LoginPage() {
         {googleClientId && (
           <div
             ref={googleButtonContainerRef}
-            className={gisReady ? 'flex justify-center' : 'hidden'}
+            className={gisReady ? 'flex max-w-full justify-center overflow-hidden' : 'hidden'}
           />
         )}
 

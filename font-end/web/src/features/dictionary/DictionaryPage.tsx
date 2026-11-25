@@ -225,8 +225,8 @@ export function DictionaryPage() {
   const hasMore = !onlySaved && displayedItems.length < totalCount;
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xs sm:flex-row sm:items-center">
+    <div className="min-h-[calc(100vh-4rem)] w-full bg-[#f8fafc]">
+      <header className="flex flex-col justify-between gap-4 px-5 pt-6 pb-2 sm:flex-row sm:items-center sm:px-7 sm:pt-7">
         <div>
           <h1 className="font-heading text-2xl font-extrabold text-slate-900">
             Từ điển Oxford 3000
@@ -260,7 +260,8 @@ export function DictionaryPage() {
         </button>
       </header>
 
-      {/* Search & Multi-Criteria Filters */}
+      <div className="space-y-5 px-5 pt-4 pb-6 sm:px-7">
+        {/* Search & Multi-Criteria Filters */}
       <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
         <div className="flex items-center gap-2.5 rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 focus-within:border-indigo-500 focus-within:bg-white">
           <Search className="h-4.5 w-4.5 shrink-0 text-slate-400" />
@@ -580,6 +581,7 @@ export function DictionaryPage() {
           </section>
         </div>
       )}
+      </div>
     </div>
   );
 }

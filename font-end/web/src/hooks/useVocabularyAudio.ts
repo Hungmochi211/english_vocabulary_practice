@@ -70,6 +70,18 @@ export function useVocabularyAudio() {
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      if (typeof window !== 'undefined') {
+        window.speechSynthesis?.cancel?.();
+      }
+    };
+  }, []);
+
   const speakFallback = useCallback((word: string, rate: number, accent: AccentCode): boolean => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
       setError('Trình duyệt hiện tại không hỗ trợ phát âm tự động.');

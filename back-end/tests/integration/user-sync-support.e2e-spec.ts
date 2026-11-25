@@ -83,4 +83,45 @@ describe('User Sync & Support E2E (US6 — FR-017..FR-020)', () => {
     expect(listed.body.data.unreadCount).toBe(0);
     expect(listed.body.data.items).toHaveLength(1);
   });
+
+  it('US6-AS6: /support/messages and /support/tickets persist learner inquiries and block non-admin from /admin/support/*', async () => {
+    const reg = await request(app.getHttpServer())
+      .post('/api/v1/auth/register')
+      .send({
+        email: `sup_${Date.now()}@vnua.edu.vn`,
+        password: 'Password123',
+        fullName: 'Support Learner',
+      })
+      .expect(201);
+    const token = reg.body.data.accessToken;
+
+    await request(app.getHttpServer())
+      .post('/api/v1/support/messages')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ text: 'Em cần hỗ trợ lộ trình A2' })
+      .expect(201);
+
+    const msgs = await request(app.getHttpServer())
+      .get('/api/v1/support/messages')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    expect(msgs.body.data.length).toBeGreaterThanOrEqual(2);
+
+    const ticket = await request(app.getHttpServer())
+      .post('/api/v1/support/tickets')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        category: 'Góp ý tính năng',
+        email: 'learner@vnua.edu.vn',
+        detail: 'Bổ sung thêm chủ đề Academic English.',
+      })
+      .expect(201);
+    expect(ticket.body.data.ticketId).toMatch(/^TK-\d{6}$/);
+
+    // Non-admin must receive 403 on /admin/support/threads
+    await request(app.getHttpServer())
+      .get('/api/v1/admin/support/threads')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(403);
+  });
 });

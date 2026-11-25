@@ -14,6 +14,7 @@ import { ReviewModule } from './modules/review/review.module';
 import { LearningModule } from './modules/learning/learning.module';
 import { GamificationModule } from './modules/gamification/gamification.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { SupportModule } from './modules/support/support.module';
 import { TransformResponseInterceptor } from './common/interceptors/transform-response.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
@@ -34,6 +35,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
     LearningModule,
     GamificationModule,
     NotificationsModule,
+    SupportModule,
   ],
 })
 export class AppModule {}

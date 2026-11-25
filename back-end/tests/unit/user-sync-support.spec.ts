@@ -4,6 +4,8 @@ import { DistractorService } from '../../src/modules/algorithm/distractor.servic
 import { StratifiedSamplingService } from '../../src/modules/algorithm/stratified-sampling.service';
 import { VocabularyService } from '../../src/modules/vocabulary/services/vocabulary.service';
 import { NotificationsService } from '../../src/modules/notifications/notifications.service';
+import { SupportService } from '../../src/modules/support/support.service';
+import { AuditService } from '../../src/modules/audit/audit.service';
 
 describe('User Sync & Support Services Unit Suite (US6 — FR-017..FR-020)', () => {
   it('US6-AS3 (History): returns submitted quiz attempts with graded word breakdown isolated by userId', async () => {
@@ -242,5 +244,144 @@ describe('User Sync & Support Services Unit Suite (US6 — FR-017..FR-020)', () 
 
     await service.clearAll(5);
     expect((await service.listForUser(5)).items).toHaveLength(0);
+  });
+
+  it('US6-AS6 (Support & Admin Support): persists learner chat/tickets and pushes notifications + audit logs on Admin reply', async () => {
+    let msgSeq = 1;
+    let ticketSeq = 1;
+    const messages: Array<{
+      id: number;
+      userId: number;
+      senderRole: string;
+      senderUserId: number | null;
+      content: string;
+      createdAt: string;
+    }> = [];
+    const tickets: Array<{
+      id: number;
+      ticketCode: string;
+      userId: number;
+      category: string;
+      contactEmail: string;
+      detail: string;
+      status: string;
+      adminReply: string | null;
+      repliedAt: string | null;
+      createdAt: string;
+    }> = [];
+
+    const dataSourceMock = {
+      query: jest.fn(async (sql: string, params?: unknown[]) => {
+        if (sql.includes('SELECT id FROM users WHERE id = $1')) {
+          return Number(params?.[0]) === 7 ? [{ id: 7 }] : [];
+        }
+        if (sql.includes('INSERT INTO support_messages')) {
+          const isAutoAck = sql.includes('NULL');
+          const row = {
+            id: msgSeq++,
+            userId: Number(params?.[0]),
+            senderRole: sql.includes("'learner'::support_sender_role_enum") ? 'learner' : 'admin',
+            senderUserId: isAutoAck ? null : Number(params?.[1]),
+            content: String(isAutoAck ? params?.[1] : params?.[2]),
+            createdAt: '2026-11-25T07:30:00.000Z',
+          };
+          messages.push(row);
+          return [row];
+        }
+        if (sql.includes('SELECT') && sql.includes('FROM support_messages') && !sql.includes('INNER JOIN users')) {
+          const uid = Number(params?.[0]);
+          return messages.filter((m) => m.userId === uid);
+        }
+        if (sql.includes('INSERT INTO support_tickets')) {
+          const row = {
+            id: ticketSeq++,
+            ticketCode: String(params?.[0]),
+            userId: Number(params?.[1]),
+            category: String(params?.[2]),
+            contactEmail: String(params?.[3]),
+            detail: String(params?.[4]),
+            status: 'open',
+            adminReply: null,
+            repliedAt: null,
+            createdAt: '2026-11-25T07:35:00.000Z',
+          };
+          tickets.unshift(row);
+          return [row];
+        }
+        if (sql.includes('SELECT id, ticket_code') && sql.includes('FROM support_tickets')) {
+          const tid = Number(params?.[0]);
+          return tickets.filter((t) => t.id === tid);
+        }
+        if (sql.includes('UPDATE support_tickets')) {
+          const tid = Number(params?.[3]);
+          const found = tickets.find((t) => t.id === tid)!;
+          found.adminReply = String(params?.[0]);
+          found.status = String(params?.[1]);
+          found.repliedAt = '2026-11-25T07:40:00.000Z';
+          return [found];
+        }
+        return [];
+      }),
+    } as unknown as DataSource;
+
+    const notifMock = {
+      createForUser: jest.fn(async () => ({
+        id: '1',
+        title: 'ok',
+        body: 'ok',
+        icon: 'message',
+        tone: 'blue' as const,
+        targetRoute: '/',
+        read: false,
+        createdAt: '2026-11-25T07:40:00.000Z',
+      })),
+    } as unknown as NotificationsService;
+
+    const auditMock = {
+      log: jest.fn(async () => undefined),
+    } as unknown as AuditService;
+
+    const support = new SupportService(dataSourceMock, notifMock, auditMock);
+
+    // Welcome message when empty
+    const initialMsgs = await support.listLearnerMessages(7);
+    expect(initialMsgs).toHaveLength(1);
+    expect(initialMsgs[0].id).toBe('sup-welcome');
+
+    // Learner sends message -> stored + auto-ack
+    const sent = await support.sendLearnerMessage(7, { text: 'Cho em hỏi về lộ trình B1' });
+    expect(sent.userMessage.sender).toBe('me');
+    expect(sent.replyMessage.sender).toBe('admin');
+
+    // Admin replies directly to learner thread -> notification + audit log
+    const adminReplyMsg = await support.replyToThread(99, 7, { text: 'Chào em, em vào mục Khóa học nhé!' }, '127.0.0.1');
+    expect(adminReplyMsg.sender).toBe('admin');
+    expect(notifMock.createForUser).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({ title: 'Phản hồi mới từ Quản trị viên' }),
+    );
+    expect(auditMock.log).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'ADMIN_SUPPORT_MESSAGE_SENT', targetId: 7 }),
+    );
+
+    // Learner submits ticket -> Admin replies and resolves ticket
+    const ticket = await support.createTicket(7, {
+      category: 'Góp ý tính năng',
+      email: 'learner@vnua.edu.vn',
+      detail: 'Đề xuất bổ sung thêm bài nghe chủ đề Du lịch.',
+    });
+    expect(ticket.ticketId).toMatch(/^TK-\d{6}$/);
+
+    const resolved = await support.replyToTicket(
+      99,
+      ticket.id,
+      { reply: 'Cảm ơn góp ý của bạn, nhóm đã ghi nhận cho đợt cập nhật tới!' },
+      '127.0.0.1',
+    );
+    expect(resolved.status).toBe('resolved');
+    expect(resolved.adminReply).toContain('nhóm đã ghi nhận');
+    expect(auditMock.log).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'ADMIN_SUPPORT_TICKET_REPLIED', targetId: ticket.id }),
+    );
   });
 });

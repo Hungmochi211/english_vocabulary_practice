@@ -33,6 +33,9 @@ const AdminUsersPage = lazy(() =>
 const AdminAuditLogsPage = lazy(() =>
   import('@/features/admin/AdminAuditLogsPage').then((m) => ({ default: m.AdminAuditLogsPage })),
 );
+const AdminSupportPage = lazy(() =>
+  import('@/features/admin/AdminSupportPage').then((m) => ({ default: m.AdminSupportPage })),
+);
 
 function RouteSkeleton() {
   return (
@@ -107,6 +110,7 @@ export function AppRoutes() {
               <Route path="/admin" element={<AdminDashboardPage />} />
               <Route path="/admin/users" element={<AdminUsersPage />} />
               <Route path="/admin/audit-logs" element={<AdminAuditLogsPage />} />
+              <Route path="/admin/support" element={<AdminSupportPage />} />
             </Route>
           </Route>
         </Route>

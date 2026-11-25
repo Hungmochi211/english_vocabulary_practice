@@ -185,7 +185,7 @@ description: "Actionable, dependency-ordered task list for 002-backend-core impl
 - [X] T055 [US6] [Đợt 4] Tạo migration `back-end/src/database/migrations/1700000000003-CreateUserSyncAndSupportTables.ts` (4 bảng `user_saved_words`, `user_notifications`, `support_messages`, `support_tickets`) và đăng ký trong `back-end/src/config/database.config.ts`
 - [X] T056 [US6] [Đợt 4] Bổ sung test + cài đặt API Sổ từ đã lưu (`GET /vocabularies/saved`, `POST /vocabularies/:id/save`, `DELETE /vocabularies/:id/save`) trong `back-end/src/modules/vocabulary/` và `back-end/tests/integration/user-sync-support.e2e-spec.ts`
 - [X] T057 [US6] [Đợt 5] Bổ sung test + cài đặt module `NotificationsModule` (`/notifications`, `/:id/read`, `/read-all`, xóa thông báo, tự động tạo thông báo khi nộp bài thực hành) tại `back-end/src/modules/notifications/` và đăng ký vào `back-end/src/app.module.ts`
-- [ ] T058 [US6] [Đợt 6] Bổ sung test + cài đặt module `SupportModule` (`/support/messages`, `/support/tickets`, `/admin/support/threads`, `/admin/support/tickets/:id/reply` kèm đẩy thông báo & ghi `audit_logs`) tại `back-end/src/modules/support/` và đăng ký vào `back-end/src/app.module.ts`
+- [X] T058 [US6] [Đợt 6] Bổ sung test + cài đặt module `SupportModule` (`/support/messages`, `/support/tickets`, `/admin/support/threads`, `/admin/support/tickets/:id/reply` kèm đẩy thông báo & ghi `audit_logs`) tại `back-end/src/modules/support/` và đăng ký vào `back-end/src/app.module.ts`
 
 ---
 

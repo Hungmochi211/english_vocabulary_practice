@@ -12,7 +12,8 @@ import { setStoredSession } from '@/services/api/httpClient';
 import { historyAdapter } from '@/services/adapters/history.adapter';
 import { savedWordsAdapter } from '@/services/adapters/savedWords.adapter';
 import { notificationsAdapter } from '@/services/adapters/notifications.adapter';
-import { getMockPasswordResetOtp, mockLearnerUser } from '../mocks/handlers';
+import { supportAdapter } from '@/services/adapters/support.adapter';
+import { getMockPasswordResetOtp, mockAdminUser, mockLearnerUser } from '../mocks/handlers';
 
 function renderApp(initialPath = '/forgot-password') {
   const client = createAppQueryClient();
@@ -171,4 +172,96 @@ describe('Account Recovery & Server Sync Suite (002/004 Upgrade)', () => {
     await user.click(screen.getByRole('button', { name: /Xóa thông báo/i }));
     expect(await screen.findByText(/Chưa có thông báo nào/i)).toBeInTheDocument();
   });
+
+  it('Wave 6 (US6-AS6 / FR-015): persists learner support chat & feedback tickets and delivers Admin replies from /admin/support', async () => {
+    setStoredSession({
+      accessToken: 'mock-access-learner',
+      refreshToken: 'mock-refresh-learner',
+      expiresInSeconds: 900,
+      user: mockLearnerUser,
+    });
+
+    const user = userEvent.setup();
+    const learnerSession = renderApp('/history');
+
+    // Learner sends live chat message & submits feedback ticket via FloatingSupportWidget
+    await user.click(await screen.findByRole('button', { name: /HỖ TRỢ/i }));
+    await user.click(screen.getByRole('button', { name: /Chat trực tiếp QTV/i }));
+    await user.type(screen.getByLabelText(/Nhắn tin cho QTV/i), 'Em muốn hỏi cách học hiệu quả B2');
+    await user.click(screen.getByRole('button', { name: /Gửi tin nhắn hỗ trợ/i }));
+    expect(await screen.findByText('Em muốn hỏi cách học hiệu quả B2')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Quay lại menu hỗ trợ/i }));
+    await user.click(screen.getByRole('button', { name: /Góp ý \/ Báo lỗi/i }));
+    await user.type(screen.getByLabelText(/Nội dung chi tiết/i), 'Đề xuất thêm tốc độ phát âm 0.75x cho bài nghe.');
+    await user.click(screen.getByRole('button', { name: /Gửi góp ý/i }));
+    expect(await screen.findByText(/Đã tiếp nhận góp ý — Mã phiếu TK-/i)).toBeInTheDocument();
+    learnerSession.unmount();
+
+    // Admin logs into /admin/support and replies to both thread and ticket
+    setStoredSession({
+      accessToken: 'mock-access-admin',
+      refreshToken: 'mock-refresh-admin',
+      expiresInSeconds: 900,
+      user: mockAdminUser,
+    });
+    const adminSession = renderApp('/admin/support');
+
+    expect(await screen.findByRole('heading', { name: /Hỗ trợ & Góp ý Học viên/i })).toBeInTheDocument();
+    expect(await screen.findByText('Em muốn hỏi cách học hiệu quả B2')).toBeInTheDocument();
+
+    await user.type(
+      screen.getByLabelText(/Phản hồi tin nhắn học viên/i),
+      'Chào An, bạn ưu tiên Gõ từ và Nghe chép chính tả mỗi ngày nhé!',
+    );
+    await user.click(screen.getByRole('button', { name: /Gửi phản hồi/i }));
+    expect(
+      (
+        await screen.findAllByText(
+          'Chào An, bạn ưu tiên Gõ từ và Nghe chép chính tả mỗi ngày nhé!',
+        )
+      ).length,
+    ).toBeGreaterThanOrEqual(1);
+
+    // Switch to Tickets tab and resolve the ticket
+    await user.click(screen.getByRole('button', { name: /Phiếu Góp ý \/ Báo lỗi/i }));
+    expect(
+      await screen.findByText('Đề xuất thêm tốc độ phát âm 0.75x cho bài nghe.'),
+    ).toBeInTheDocument();
+    await user.type(
+      screen.getByLabelText(/Nội dung phản hồi phiếu TK-/i),
+      'Cảm ơn An, tính năng nghe chậm đã được ghi nhận vào bản cập nhật tới!',
+    );
+    await user.click(screen.getByRole('button', { name: /Phản hồi & Đóng phiếu/i }));
+    expect(
+      await screen.findByText(
+        'Cảm ơn An, tính năng nghe chậm đã được ghi nhận vào bản cập nhật tới!',
+      ),
+    ).toBeInTheDocument();
+    expect((await screen.findAllByText('Đã xử lý')).length).toBeGreaterThanOrEqual(2);
+    adminSession.unmount();
+
+    // Learner reopens app on a clean browser -> receives Admin replies in Bell & Support Chat
+    supportAdapter.clear();
+    notificationsAdapter.clear();
+    setStoredSession({
+      accessToken: 'mock-access-learner',
+      refreshToken: 'mock-refresh-learner',
+      expiresInSeconds: 900,
+      user: mockLearnerUser,
+    });
+    renderApp('/history');
+
+    const bellBtn = await screen.findByRole('button', { name: /Thông báo/i });
+    await user.click(bellBtn);
+    expect(await screen.findByText(/QTV đã phản hồi góp ý/i)).toBeInTheDocument();
+    expect(screen.getByText(/Phản hồi mới từ Quản trị viên/i)).toBeInTheDocument();
+    await user.click(bellBtn);
+
+    await user.click(screen.getByRole('button', { name: /HỖ TRỢ/i }));
+    await user.click(screen.getByRole('button', { name: /Chat trực tiếp QTV/i }));
+    expect(
+      await screen.findByText('Chào An, bạn ưu tiên Gõ từ và Nghe chép chính tả mỗi ngày nhé!'),
+    ).toBeInTheDocument();
+  }, 15000);
 });

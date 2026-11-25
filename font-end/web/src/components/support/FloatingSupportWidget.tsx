@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/app/AuthProvider';
 import { OPEN_SUPPORT_WIDGET_EVENT } from '@/components/layout/AccountMenu';
-import { supportAdapter } from '@/services/adapters/support.adapter';
+import { SUPPORT_EVENT, supportAdapter } from '@/services/adapters/support.adapter';
 import { notificationsAdapter } from '@/services/adapters/notifications.adapter';
 import { useToast } from '@/components/common/CommonUi';
 import { CustomSelect } from '@/components/common/CustomSelect';
@@ -39,6 +39,18 @@ export function FloatingSupportWidget() {
   const [messages, setMessages] = useState<SupportMessage[]>(() => supportAdapter.listMessages());
   const [chatInput, setChatInput] = useState('');
 
+  useEffect(() => {
+    const sync = () => setMessages(supportAdapter.listMessages());
+    window.addEventListener(SUPPORT_EVENT, sync);
+    return () => window.removeEventListener(SUPPORT_EVENT, sync);
+  }, []);
+
+  useEffect(() => {
+    if (open) {
+      void supportAdapter.syncMessagesFromServer();
+    }
+  }, [open, view]);
+
   const [category, setCategory] = useState('Góp ý tính năng');
   const [detail, setDetail] = useState('');
   const [ticketConfirmation, setTicketConfirmation] = useState<string | null>(null);
@@ -48,8 +60,8 @@ export function FloatingSupportWidget() {
     if (!chatInput.trim()) return;
     const text = chatInput.trim();
     setChatInput('');
-    const { userMessage, replyMessage } = await supportAdapter.sendMessage(text);
-    setMessages((prev) => [...prev, userMessage, replyMessage]);
+    await supportAdapter.sendMessage(text);
+    setMessages(supportAdapter.listMessages());
   }
 
   async function handleSubmitFeedback(e: FormEvent) {
@@ -60,13 +72,17 @@ export function FloatingSupportWidget() {
       email: user?.email ?? 'learner@lexitag.vn',
       detail: detail.trim(),
     });
-    notificationsAdapter.push({
-      title: `Đã tiếp nhận góp ý (${ticket.ticketId})`,
-      body: `Cảm ơn bạn đã gửi "${category}". Đội ngũ QTV sẽ xem xét sớm nhất.`,
-      icon: 'message',
-      tone: 'purple',
-      targetRoute: '/',
-    });
+    if (ticket.syncedToServer) {
+      await notificationsAdapter.syncFromServer();
+    } else {
+      notificationsAdapter.push({
+        title: `Đã tiếp nhận góp ý (${ticket.ticketId})`,
+        body: `Cảm ơn bạn đã gửi "${category}". Đội ngũ QTV sẽ xem xét sớm nhất.`,
+        icon: 'message',
+        tone: 'purple',
+        targetRoute: '/',
+      });
+    }
     setTicketConfirmation(`Đã tiếp nhận góp ý — Mã phiếu ${ticket.ticketId}.`);
     setDetail('');
     showToast(`Đã gửi góp ý thành công (${ticket.ticketId})`, 'success');

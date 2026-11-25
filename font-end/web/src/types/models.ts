@@ -336,6 +336,32 @@ export interface AiConversation {
 export interface SupportMessage {
   id: string;
   sender: 'me' | 'admin';
+  senderRole?: 'learner' | 'admin';
   text: string;
   createdAt: string;
+}
+
+export interface SupportTicketItem {
+  id: number;
+  ticketId: string;
+  userId: number;
+  userFullName?: string;
+  userEmail?: string;
+  category: string;
+  email: string;
+  detail: string;
+  status: 'open' | 'resolved';
+  adminReply: string | null;
+  repliedAt: string | null;
+  submittedAt: string;
+}
+
+export interface AdminSupportThread {
+  userId: number;
+  email: string;
+  fullName: string;
+  messageCount: number;
+  lastMessage: string;
+  lastSenderRole: 'learner' | 'admin';
+  lastMessageAt: string;
 }

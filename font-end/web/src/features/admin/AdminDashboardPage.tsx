@@ -5,6 +5,7 @@ import {
   ArrowRight,
   BookOpen,
   ClipboardList,
+  Headphones,
   Shield,
   Users,
 } from 'lucide-react';
@@ -43,6 +44,13 @@ export function AdminDashboardPage() {
           >
             <Users className="h-4 w-4" />
             <span>Quản lý Học viên</span>
+          </Link>
+          <Link
+            to="/admin/support"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-bold text-indigo-800 transition hover:bg-indigo-100"
+          >
+            <Headphones className="h-4 w-4" />
+            <span>Hỗ trợ &amp; Góp ý</span>
           </Link>
           <Link
             to="/admin/audit-logs"
@@ -99,7 +107,7 @@ export function AdminDashboardPage() {
         </section>
       )}
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Link
           to="/admin/users"
           className="group flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs transition hover:border-indigo-300"
@@ -110,7 +118,7 @@ export function AdminDashboardPage() {
             </span>
             <div>
               <h2 className="font-heading text-base font-extrabold text-slate-900">
-                Danh sách & Trạng thái Học viên
+                Danh sách &amp; Trạng thái Học viên
               </h2>
               <p className="text-xs text-slate-500">
                 Tìm kiếm theo tên/email và khóa hoặc mở khóa tài khoản có xác nhận.
@@ -118,6 +126,26 @@ export function AdminDashboardPage() {
             </div>
           </div>
           <ArrowRight className="h-5 w-5 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-indigo-700" />
+        </Link>
+
+        <Link
+          to="/admin/support"
+          className="group flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs transition hover:border-emerald-300"
+        >
+          <div className="flex items-center gap-3.5">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+              <Headphones className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 className="font-heading text-base font-extrabold text-slate-900">
+                Hỗ trợ &amp; Góp ý Học viên
+              </h2>
+              <p className="text-xs text-slate-500">
+                Xem hội thoại trực tiếp và phản hồi phiếu góp ý / báo lỗi từ học viên.
+              </p>
+            </div>
+          </div>
+          <ArrowRight className="h-5 w-5 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-emerald-700" />
         </Link>
 
         <Link

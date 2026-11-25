@@ -15,6 +15,8 @@ import type {
   QuizSubmitResult,
   SavedWordRecord,
   StatsOverview,
+  SupportMessage,
+  SupportTicketItem,
   Topic,
   UserProfile,
   VocabularyItem,
@@ -369,13 +371,21 @@ export function resetMockDb(): void {
   mockServerHistory.length = 0;
   mockServerSavedWords.length = 0;
   mockServerNotifications.length = 0;
+  mockServerSupportMessages.length = 0;
+  mockServerSupportTickets.length = 0;
   nextNotifId = 1;
+  nextSupportMsgId = 1;
+  nextSupportTicketId = 1;
 }
 
 let nextNotifId = 1;
+let nextSupportMsgId = 1;
+let nextSupportTicketId = 1;
 const mockPasswordResetOtps = new Map<string, { otp: string; attempts: number }>();
 const mockServerSavedWords: SavedWordRecord[] = [];
 const mockServerNotifications: NotificationItem[] = [];
+const mockServerSupportMessages: SupportMessage[] = [];
+const mockServerSupportTickets: SupportTicketItem[] = [];
 const mockServerHistory: Array<{
   id: string;
   attemptId: number;
@@ -1565,5 +1575,224 @@ export const handlers = [
       mockServerNotifications.splice(idx, 1);
     }
     return HttpResponse.json({ success: true, data: null, error: null });
+  }),
+
+  http.get(`${API_BASE}/support/messages`, async () => {
+    if (mockServerSupportMessages.length === 0) {
+      return HttpResponse.json({
+        success: true,
+        data: [
+          {
+            id: 'sup-welcome',
+            sender: 'admin',
+            senderRole: 'admin',
+            text: 'Chào bạn! Đội ngũ Quản trị viên LexiTag luôn sẵn sàng hỗ trợ về tài khoản, lộ trình học và góp ý sản phẩm.',
+            createdAt: new Date().toISOString(),
+          },
+        ],
+        error: null,
+      });
+    }
+    return HttpResponse.json({
+      success: true,
+      data: [...mockServerSupportMessages],
+      error: null,
+    });
+  }),
+
+  http.post(`${API_BASE}/support/messages`, async ({ request }) => {
+    const body = (await request.json()) as { text?: string };
+    const text = (body.text ?? '').trim();
+    const userMessage: SupportMessage = {
+      id: String(nextSupportMsgId++),
+      sender: 'me',
+      senderRole: 'learner',
+      text,
+      createdAt: new Date().toISOString(),
+    };
+    const replyMessage: SupportMessage = {
+      id: String(nextSupportMsgId++),
+      sender: 'admin',
+      senderRole: 'admin',
+      text: 'Cảm ơn bạn đã nhắn tin! QTV đã tiếp nhận yêu cầu và sẽ phản hồi sớm nhất qua hộp thư này hoặc thông báo tài khoản của bạn.',
+      createdAt: new Date().toISOString(),
+    };
+    mockServerSupportMessages.push(userMessage, replyMessage);
+    return HttpResponse.json(
+      { success: true, data: { userMessage, replyMessage }, error: null },
+      { status: 201 },
+    );
+  }),
+
+  http.get(`${API_BASE}/support/tickets`, async () => {
+    return HttpResponse.json({
+      success: true,
+      data: [...mockServerSupportTickets],
+      error: null,
+    });
+  }),
+
+  http.post(`${API_BASE}/support/tickets`, async ({ request }) => {
+    const body = (await request.json()) as { category?: string; email?: string; detail?: string };
+    const id = nextSupportTicketId++;
+    const ticketId = `TK-${String(100000 + id)}`;
+    const category = (body.category ?? 'Góp ý tính năng').trim();
+    const created: SupportTicketItem = {
+      id,
+      ticketId,
+      userId: mockLearnerUser.id,
+      userFullName: mockLearnerUser.fullName,
+      userEmail: mockLearnerUser.email,
+      category,
+      email: (body.email ?? mockLearnerUser.email).trim(),
+      detail: (body.detail ?? '').trim(),
+      status: 'open',
+      adminReply: null,
+      repliedAt: null,
+      submittedAt: new Date().toISOString(),
+    };
+    mockServerSupportTickets.unshift(created);
+    mockServerNotifications.unshift({
+      id: String(nextNotifId++),
+      title: `Đã tiếp nhận góp ý (${ticketId})`,
+      body: `Cảm ơn bạn đã gửi "${category}". Đội ngũ QTV sẽ xem xét sớm nhất.`,
+      icon: 'message',
+      tone: 'purple',
+      targetRoute: '/',
+      read: false,
+      createdAt: new Date().toISOString(),
+    });
+    return HttpResponse.json({ success: true, data: created, error: null }, { status: 201 });
+  }),
+
+  http.get(`${API_BASE}/admin/support/threads`, async () => {
+    if (mockServerSupportMessages.length === 0) {
+      return HttpResponse.json({ success: true, data: [], error: null });
+    }
+    const last = mockServerSupportMessages[mockServerSupportMessages.length - 1];
+    return HttpResponse.json({
+      success: true,
+      data: [
+        {
+          userId: mockLearnerUser.id,
+          email: mockLearnerUser.email,
+          fullName: mockLearnerUser.fullName,
+          messageCount: mockServerSupportMessages.length,
+          lastMessage: last.text,
+          lastSenderRole: last.senderRole ?? (last.sender === 'me' ? 'learner' : 'admin'),
+          lastMessageAt: last.createdAt,
+        },
+      ],
+      error: null,
+    });
+  }),
+
+  http.get(`${API_BASE}/admin/support/threads/:userId/messages`, async () => {
+    return HttpResponse.json({
+      success: true,
+      data: [...mockServerSupportMessages],
+      error: null,
+    });
+  }),
+
+  http.post(`${API_BASE}/admin/support/threads/:userId/messages`, async ({ params, request }) => {
+    const body = (await request.json()) as { text?: string };
+    const text = (body.text ?? '').trim();
+    const msg: SupportMessage = {
+      id: String(nextSupportMsgId++),
+      sender: 'admin',
+      senderRole: 'admin',
+      text,
+      createdAt: new Date().toISOString(),
+    };
+    mockServerSupportMessages.push(msg);
+    mockServerNotifications.unshift({
+      id: String(nextNotifId++),
+      title: 'Phản hồi mới từ Quản trị viên',
+      body: text,
+      icon: 'message',
+      tone: 'blue',
+      targetRoute: '/',
+      read: false,
+      createdAt: new Date().toISOString(),
+    });
+    mockDb.auditLogs.unshift({
+      id: Date.now(),
+      actorId: mockAdminUser.id,
+      actorEmail: mockAdminUser.email,
+      action: 'ADMIN_SUPPORT_MESSAGE_SENT',
+      targetType: 'user',
+      targetId: Number(params.userId),
+      createdAt: new Date().toISOString(),
+    });
+    return HttpResponse.json({ success: true, data: msg, error: null }, { status: 201 });
+  }),
+
+  http.get(`${API_BASE}/admin/support/tickets`, async ({ request }) => {
+    const url = new URL(request.url);
+    const status = url.searchParams.get('status');
+    const page = Math.max(1, Number(url.searchParams.get('page') ?? 1));
+    const limit = Math.max(1, Number(url.searchParams.get('limit') ?? 20));
+    const filtered = status
+      ? mockServerSupportTickets.filter((t) => t.status === status)
+      : [...mockServerSupportTickets];
+    return HttpResponse.json({
+      success: true,
+      data: {
+        items: filtered.slice((page - 1) * limit, page * limit),
+        page,
+        limit,
+        total: filtered.length,
+        totalPages: Math.max(1, Math.ceil(filtered.length / limit)),
+      },
+      error: null,
+    });
+  }),
+
+  http.patch(`${API_BASE}/admin/support/tickets/:ticketId/reply`, async ({ params, request }) => {
+    const ticketId = Number(params.ticketId);
+    const body = (await request.json()) as { reply?: string; status?: 'open' | 'resolved' };
+    const found = mockServerSupportTickets.find((t) => t.id === ticketId);
+    if (!found) {
+      return HttpResponse.json(
+        {
+          success: false,
+          data: null,
+          error: { code: 'TICKET_NOT_FOUND', message: 'Không tìm thấy phiếu góp ý', details: null },
+        },
+        { status: 404 },
+      );
+    }
+    const reply = (body.reply ?? '').trim();
+    found.adminReply = reply;
+    found.status = body.status ?? 'resolved';
+    found.repliedAt = new Date().toISOString();
+    mockServerSupportMessages.push({
+      id: String(nextSupportMsgId++),
+      sender: 'admin',
+      senderRole: 'admin',
+      text: `[Phản hồi phiếu ${found.ticketId}] ${reply}`,
+      createdAt: new Date().toISOString(),
+    });
+    mockServerNotifications.unshift({
+      id: String(nextNotifId++),
+      title: `QTV đã phản hồi góp ý (${found.ticketId})`,
+      body: reply,
+      icon: 'message',
+      tone: 'green',
+      targetRoute: '/',
+      read: false,
+      createdAt: new Date().toISOString(),
+    });
+    mockDb.auditLogs.unshift({
+      id: Date.now(),
+      actorId: mockAdminUser.id,
+      actorEmail: mockAdminUser.email,
+      action: 'ADMIN_SUPPORT_TICKET_REPLIED',
+      targetType: 'support_ticket',
+      targetId: ticketId,
+      createdAt: new Date().toISOString(),
+    });
+    return HttpResponse.json({ success: true, data: found, error: null });
   }),
 ];

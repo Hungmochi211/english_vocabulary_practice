@@ -8,12 +8,14 @@ import { QuizGradingService } from './quiz-grading.service';
 import { LearningController } from './learning.controller';
 import { AlgorithmModule } from '../algorithm/algorithm.module';
 import { ReviewModule } from '../review/review.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([UserLessonProgress, QuizAttempt, QuizAttemptAnswer]),
     AlgorithmModule,
     ReviewModule,
+    NotificationsModule,
   ],
   controllers: [LearningController],
   providers: [LearningService, QuizGradingService],

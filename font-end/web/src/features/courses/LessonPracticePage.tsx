@@ -136,15 +136,18 @@ export function LessonPracticePage() {
           ok: r.gradingStatus === 'exact',
         })),
       });
-      notificationsAdapter.push({
-        title: result.passed ? 'Đạt Thực hành Bước 2!' : 'Hoàn tất Thực hành Bước 2',
-        body: result.passed
-          ? `Bạn đạt ${result.scorePercent}% (+${result.xpEarned} XP) và mở khóa bài kế tiếp.`
-          : `Bạn đạt ${result.scorePercent}%. Ôn lại các từ sai để vượt ngưỡng 80% nhé.`,
-        icon: 'trophy',
-        tone: result.passed ? 'green' : 'amber',
-        targetRoute: '/history',
-      });
+      const syncedNotifs = await notificationsAdapter.syncFromServer();
+      if (syncedNotifs.length === 0) {
+        notificationsAdapter.push({
+          title: result.passed ? 'Đạt Thực hành Bước 2!' : 'Hoàn tất Thực hành Bước 2',
+          body: result.passed
+            ? `Bạn đạt ${result.scorePercent}% (+${result.xpEarned} XP) và mở khóa bài kế tiếp.`
+            : `Bạn đạt ${result.scorePercent}%. Ôn lại các từ sai để vượt ngưỡng 80% nhé.`,
+          icon: 'trophy',
+          tone: result.passed ? 'green' : 'amber',
+          targetRoute: '/history',
+        });
+      }
       showToast(
         result.passed
           ? `Xuất sắc! Đạt ${result.scorePercent}% (+${result.xpEarned} XP)`

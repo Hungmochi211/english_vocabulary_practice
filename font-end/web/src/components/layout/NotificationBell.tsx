@@ -24,8 +24,15 @@ export function NotificationBell() {
   useEffect(() => {
     const sync = () => setItems(notificationsAdapter.list());
     window.addEventListener(NOTIFICATIONS_EVENT, sync);
+    void notificationsAdapter.syncFromServer();
     return () => window.removeEventListener(NOTIFICATIONS_EVENT, sync);
   }, []);
+
+  useEffect(() => {
+    if (open) {
+      void notificationsAdapter.syncFromServer();
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return undefined;

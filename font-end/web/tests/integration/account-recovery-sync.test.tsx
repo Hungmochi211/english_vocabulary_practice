@@ -11,6 +11,7 @@ import { AppRoutes } from '@/app/router';
 import { setStoredSession } from '@/services/api/httpClient';
 import { historyAdapter } from '@/services/adapters/history.adapter';
 import { savedWordsAdapter } from '@/services/adapters/savedWords.adapter';
+import { notificationsAdapter } from '@/services/adapters/notifications.adapter';
 import { getMockPasswordResetOtp, mockLearnerUser } from '../mocks/handlers';
 
 function renderApp(initialPath = '/forgot-password') {
@@ -122,5 +123,52 @@ describe('Account Recovery & Server Sync Suite (002/004 Upgrade)', () => {
     // Reopen /dictionary -> bookmark is restored from GET /vocabularies/saved
     renderApp('/dictionary');
     expect(await screen.findByRole('button', { name: /Sổ từ đã lưu \(1\)/i })).toBeInTheDocument();
+  });
+
+  it('Wave 5 (US6-AS5 / FR-014): syncs NotificationBell unread items, mark-all-read, and deletion with server', async () => {
+    setStoredSession({
+      accessToken: 'mock-access-learner',
+      refreshToken: 'mock-refresh-learner',
+      expiresInSeconds: 900,
+      user: mockLearnerUser,
+    });
+
+    notificationsAdapter.push({
+      title: 'Thông báo đồng bộ máy chủ',
+      body: 'Bạn vừa hoàn thành mục tiêu học từ vựng hôm nay.',
+      icon: 'trophy',
+      tone: 'green',
+      targetRoute: '/history',
+    });
+
+    // Wait for background POST /notifications to settle via syncFromServer
+    await notificationsAdapter.syncFromServer();
+
+    // Simulate logging in on another browser with empty localStorage
+    notificationsAdapter.clear();
+    expect(notificationsAdapter.list()).toHaveLength(0);
+
+    const user = userEvent.setup();
+    const { unmount } = renderApp('/history');
+
+    // Unread dot is restored from GET /notifications
+    expect(await screen.findByTestId('notif-unread-dot')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Thông báo/i }));
+    expect(await screen.findByText('Thông báo đồng bộ máy chủ')).toBeInTheDocument();
+
+    // Mark all read -> persisted on server
+    await user.click(screen.getByRole('button', { name: /Đánh dấu đã đọc tất cả/i }));
+    await notificationsAdapter.syncFromServer();
+    unmount();
+
+    // Reopen on fresh session -> notification remains read (no unread dot) and can be deleted
+    notificationsAdapter.clear();
+    renderApp('/history');
+    await user.click(await screen.findByRole('button', { name: /Thông báo/i }));
+    expect(await screen.findByText('Thông báo đồng bộ máy chủ')).toBeInTheDocument();
+    expect(screen.queryByTestId('notif-unread-dot')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Xóa thông báo/i }));
+    expect(await screen.findByText(/Chưa có thông báo nào/i)).toBeInTheDocument();
   });
 });

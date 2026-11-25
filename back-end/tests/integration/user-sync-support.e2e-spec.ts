@@ -46,4 +46,41 @@ describe('User Sync & Support E2E (US6 — FR-017..FR-020)', () => {
       .expect(200);
     expect(histEmpty.body.data.items).toEqual([]);
   });
+
+  it('US6-AS5: /notifications persists create, read-all, and delete per learner', async () => {
+    const reg = await request(app.getHttpServer())
+      .post('/api/v1/auth/register')
+      .send({
+        email: `notif_${Date.now()}@vnua.edu.vn`,
+        password: 'Password123',
+        fullName: 'Notif Learner',
+      })
+      .expect(201);
+    const token = reg.body.data.accessToken;
+
+    const created = await request(app.getHttpServer())
+      .post('/api/v1/notifications')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        title: 'Hoàn tất phiên ôn SM-2',
+        body: 'Bạn đạt 100%',
+        icon: 'trophy',
+        tone: 'green',
+        targetRoute: '/history',
+      })
+      .expect(201);
+    expect(created.body.data.read).toBe(false);
+
+    await request(app.getHttpServer())
+      .patch('/api/v1/notifications/read-all')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const listed = await request(app.getHttpServer())
+      .get('/api/v1/notifications')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    expect(listed.body.data.unreadCount).toBe(0);
+    expect(listed.body.data.items).toHaveLength(1);
+  });
 });

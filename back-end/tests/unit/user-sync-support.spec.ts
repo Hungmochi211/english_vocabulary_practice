@@ -3,6 +3,7 @@ import { LearningService } from '../../src/modules/learning/learning.service';
 import { DistractorService } from '../../src/modules/algorithm/distractor.service';
 import { StratifiedSamplingService } from '../../src/modules/algorithm/stratified-sampling.service';
 import { VocabularyService } from '../../src/modules/vocabulary/services/vocabulary.service';
+import { NotificationsService } from '../../src/modules/notifications/notifications.service';
 
 describe('User Sync & Support Services Unit Suite (US6 — FR-017..FR-020)', () => {
   it('US6-AS3 (History): returns submitted quiz attempts with graded word breakdown isolated by userId', async () => {
@@ -139,5 +140,107 @@ describe('User Sync & Support Services Unit Suite (US6 — FR-017..FR-020)', () 
 
     await service.unsaveWord(10, 101);
     expect(await service.listSavedWords(10)).toHaveLength(0);
+  });
+
+  it('US6-AS5 (Notifications): creates, isolates by userId, marks read/read-all, and removes notifications', async () => {
+    let seq = 1;
+    const rows: Array<{
+      id: number;
+      userId: number;
+      title: string;
+      body: string;
+      icon: string;
+      tone: string;
+      targetRoute: string;
+      isRead: boolean;
+      createdAt: string;
+    }> = [];
+
+    const dataSourceMock = {
+      query: jest.fn(async (sql: string, params?: unknown[]) => {
+        if (sql.includes('INSERT INTO user_notifications')) {
+          const created = {
+            id: seq++,
+            userId: Number(params?.[0]),
+            title: String(params?.[1]),
+            body: String(params?.[2]),
+            icon: String(params?.[3]),
+            tone: String(params?.[4]),
+            targetRoute: String(params?.[5]),
+            isRead: false,
+            createdAt: '2026-11-25T07:00:00.000Z',
+          };
+          rows.unshift(created);
+          return [created];
+        }
+        if (sql.includes('SELECT') && sql.includes('FROM user_notifications')) {
+          const uid = Number(params?.[0]);
+          return rows.filter((r) => r.userId === uid);
+        }
+        if (sql.includes('SET is_read = TRUE') && sql.includes('WHERE id = $1 AND user_id = $2')) {
+          const id = Number(params?.[0]);
+          const uid = Number(params?.[1]);
+          rows.forEach((r) => {
+            if (r.id === id && r.userId === uid) r.isRead = true;
+          });
+          return [];
+        }
+        if (sql.includes('SET is_read = TRUE') && sql.includes('WHERE user_id = $1')) {
+          const uid = Number(params?.[0]);
+          rows.forEach((r) => {
+            if (r.userId === uid) r.isRead = true;
+          });
+          return [];
+        }
+        if (sql.includes('DELETE FROM user_notifications') && sql.includes('WHERE id = $1')) {
+          const id = Number(params?.[0]);
+          const uid = Number(params?.[1]);
+          const idx = rows.findIndex((r) => r.id === id && r.userId === uid);
+          if (idx >= 0) rows.splice(idx, 1);
+          return [];
+        }
+        if (sql.includes('DELETE FROM user_notifications') && sql.includes('WHERE user_id = $1')) {
+          const uid = Number(params?.[0]);
+          for (let i = rows.length - 1; i >= 0; i -= 1) {
+            if (rows[i].userId === uid) rows.splice(i, 1);
+          }
+          return [];
+        }
+        return [];
+      }),
+    } as unknown as DataSource;
+
+    const service = new NotificationsService(dataSourceMock);
+    const n1 = await service.createForUser(5, {
+      title: 'Hoàn tất phiên ôn',
+      body: 'Đạt 90%',
+      icon: 'trophy',
+      tone: 'green',
+      targetRoute: '/history',
+    });
+    await service.createForUser(5, {
+      title: 'Nhắc ôn tập 20:00',
+      body: 'Còn 3 từ đến hạn',
+      tone: 'amber',
+    });
+
+    expect((await service.listForUser(99)).items).toHaveLength(0);
+    const listBefore = await service.listForUser(5);
+    expect(listBefore.unreadCount).toBe(2);
+
+    await service.markRead(99, Number(n1.id)); // wrong user cannot mark read
+    expect((await service.listForUser(5)).unreadCount).toBe(2);
+
+    await service.markRead(5, Number(n1.id));
+    expect((await service.listForUser(5)).unreadCount).toBe(1);
+
+    await service.markAllRead(5);
+    expect((await service.listForUser(5)).unreadCount).toBe(0);
+
+    await service.removeOne(5, Number(n1.id));
+    expect((await service.listForUser(5)).items).toHaveLength(1);
+
+    await service.clearAll(5);
+    expect((await service.listForUser(5)).items).toHaveLength(0);
   });
 });

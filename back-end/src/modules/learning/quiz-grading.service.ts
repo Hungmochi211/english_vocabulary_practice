@@ -20,6 +20,7 @@ import {
 import { GeneratedQuestionSnapshot } from '../algorithm/distractor.service';
 import { ReviewService, Sm2UpdateItem } from '../review/review.service';
 import { AuditService } from '../audit/audit.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
 import { getTodayUtc7Date } from '../../common/utils/timezone.util';
 
@@ -47,6 +48,7 @@ export class QuizGradingService {
     private readonly dataSource: DataSource,
     private readonly reviewService: ReviewService,
     private readonly auditService: AuditService,
+    @Optional() private readonly notificationsService?: NotificationsService,
   ) {}
 
   setStreakRecorder(recorder: StreakProgressRecorder): void {
@@ -307,6 +309,22 @@ export class QuizGradingService {
           status: 'SUCCESS',
           metadata: { scorePercentage },
         });
+      }
+
+      if (attempt.attempt_type === 'lesson_practice' && this.notificationsService) {
+        try {
+          await this.notificationsService.createForUser(userId, {
+            title: passed ? 'Đạt Thực hành Bước 2!' : 'Hoàn tất Thực hành Bước 2',
+            body: passed
+              ? `Bạn đạt ${scorePercentage}% và mở khóa bài học kế tiếp.`
+              : `Bạn đạt ${scorePercentage}%. Ôn lại các từ sai để vượt ngưỡng 80% nhé.`,
+            icon: 'trophy',
+            tone: passed ? 'green' : 'amber',
+            targetRoute: '/history',
+          });
+        } catch {
+          // Không làm sập phản hồi nộp bài nếu chỉ ghi thông báo gặp lỗi phụ
+        }
       }
 
       return {

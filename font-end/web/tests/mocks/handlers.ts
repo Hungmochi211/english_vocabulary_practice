@@ -9,6 +9,7 @@ import type {
   GradingStatus,
   LessonDetail,
   LessonProgressItem,
+  NotificationItem,
   QuizAttemptStart,
   QuizQuestion,
   QuizSubmitResult,
@@ -367,10 +368,14 @@ export function resetMockDb(): void {
   mockPasswordResetOtps.clear();
   mockServerHistory.length = 0;
   mockServerSavedWords.length = 0;
+  mockServerNotifications.length = 0;
+  nextNotifId = 1;
 }
 
+let nextNotifId = 1;
 const mockPasswordResetOtps = new Map<string, { otp: string; attempts: number }>();
 const mockServerSavedWords: SavedWordRecord[] = [];
+const mockServerNotifications: NotificationItem[] = [];
 const mockServerHistory: Array<{
   id: string;
   attemptId: number;
@@ -1264,6 +1269,21 @@ export const handlers = [
       })),
     });
 
+    if (attempt.attemptType === 'lesson_practice') {
+      mockServerNotifications.unshift({
+        id: String(nextNotifId++),
+        title: passed ? 'Đạt Thực hành Bước 2!' : 'Hoàn tất Thực hành Bước 2',
+        body: passed
+          ? `Bạn đạt ${scorePercent}% (+${xpEarned} XP) và mở khóa bài kế tiếp.`
+          : `Bạn đạt ${scorePercent}%. Ôn lại các từ sai để vượt ngưỡng 80% nhé.`,
+        icon: 'trophy',
+        tone: passed ? 'green' : 'amber',
+        targetRoute: '/history',
+        read: false,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
     return HttpResponse.json({
       success: true,
       data: submitResult,
@@ -1483,5 +1503,67 @@ export const handlers = [
       data: null,
       error: null,
     });
+  }),
+
+  http.get(`${API_BASE}/notifications`, async () => {
+    const items = [...mockServerNotifications];
+    return HttpResponse.json({
+      success: true,
+      data: {
+        items,
+        unreadCount: items.filter((n) => !n.read).length,
+      },
+      error: null,
+    });
+  }),
+
+  http.post(`${API_BASE}/notifications`, async ({ request }) => {
+    const body = (await request.json()) as {
+      title?: string;
+      body?: string;
+      icon?: string;
+      tone?: NotificationItem['tone'];
+      targetRoute?: string;
+    };
+    const created: NotificationItem = {
+      id: String(nextNotifId++),
+      title: (body.title ?? '').trim() || 'Thông báo mới',
+      body: (body.body ?? '').trim(),
+      icon: body.icon || 'bell',
+      tone: body.tone ?? 'blue',
+      targetRoute: body.targetRoute || '/',
+      read: false,
+      createdAt: new Date().toISOString(),
+    };
+    mockServerNotifications.unshift(created);
+    return HttpResponse.json({ success: true, data: created, error: null }, { status: 201 });
+  }),
+
+  http.delete(`${API_BASE}/notifications`, async () => {
+    mockServerNotifications.length = 0;
+    return HttpResponse.json({ success: true, data: null, error: null });
+  }),
+
+  http.patch(`${API_BASE}/notifications/read-all`, async () => {
+    mockServerNotifications.forEach((n) => {
+      n.read = true;
+    });
+    return HttpResponse.json({ success: true, data: null, error: null });
+  }),
+
+  http.patch(`${API_BASE}/notifications/:id/read`, async ({ params }) => {
+    const target = mockServerNotifications.find((n) => n.id === String(params.id));
+    if (target) {
+      target.read = true;
+    }
+    return HttpResponse.json({ success: true, data: null, error: null });
+  }),
+
+  http.delete(`${API_BASE}/notifications/:id`, async ({ params }) => {
+    const idx = mockServerNotifications.findIndex((n) => n.id === String(params.id));
+    if (idx >= 0) {
+      mockServerNotifications.splice(idx, 1);
+    }
+    return HttpResponse.json({ success: true, data: null, error: null });
   }),
 ];

@@ -403,3 +403,77 @@ CREATE INDEX idx_audit_actor_created ON audit_logs (actor_user_id, created_at DE
 ### Quy tắc Migration & Rollback (CHK074)
 - Mọi TypeORM migration của `002-backend-core` MUST chạy trong **1 PostgreSQL transaction** để lỗi cục bộ tự rollback toàn bộ, không để lại bảng/ràng buộc dở dang.
 - Mỗi migration MUST có hàm `down()` hoàn tác theo thứ tự ngược phụ thuộc (`audit_logs`, `daily_study_logs`, `user_streaks`, `user_sm2_reviews`, `quiz_attempt_answers`, `quiz_attempts`, `user_lesson_progress`, `refresh_sessions`, `users`, rồi đến các `ENUM` mới của `002`) và tuyệt đối không đụng các bảng/enum của `001-vocabulary-data`.
+
+---
+
+## Phần mở rộng Đồng bộ Cá nhân, Hỗ trợ & OTP Khôi phục Mật khẩu (`US6` — Migration `1700000000003`)
+
+### Khóa Redis cho OTP Khôi phục Mật khẩu (`FR-016`)
+- `auth:pwd_reset:<email_lower>` → JSON `{ "otpHash": "<sha256_hex>", "attempts": 0 }`, `TTL = 600s` (10 phút), xóa ngay khi khớp hoặc khi `attempts >= 5`.
+- `auth:pwd_reset_rl:email:<email_lower>` → Bộ đếm giới hạn tối đa `3` yêu cầu / `900s` (15 phút).
+- `auth:pwd_reset_rl:ip:<ip>` → Bộ đếm giới hạn tối đa `10` yêu cầu / `900s` (15 phút).
+
+### DDL Migration `1700000000003-CreateUserSyncAndSupportTables.ts`
+
+```sql
+DO $$ BEGIN
+    CREATE TYPE notification_tone_enum AS ENUM ('amber', 'green', 'blue', 'purple');
+    CREATE TYPE support_sender_role_enum AS ENUM ('learner', 'admin');
+    CREATE TYPE support_ticket_status_enum AS ENUM ('open', 'resolved');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+-- 10. user_saved_words
+CREATE TABLE IF NOT EXISTS user_saved_words (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    vocabulary_id INT NOT NULL REFERENCES vocabularies(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_user_saved_word UNIQUE (user_id, vocabulary_id)
+);
+CREATE INDEX IF NOT EXISTS idx_saved_words_user_created ON user_saved_words (user_id, created_at DESC);
+
+-- 11. user_notifications
+CREATE TABLE IF NOT EXISTS user_notifications (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(150) NOT NULL,
+    body VARCHAR(500) NOT NULL,
+    icon VARCHAR(40) NOT NULL DEFAULT 'bell',
+    tone notification_tone_enum NOT NULL DEFAULT 'blue',
+    target_route VARCHAR(200) NOT NULL DEFAULT '/',
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON user_notifications (user_id, created_at DESC, id DESC);
+
+-- 12. support_messages
+CREATE TABLE IF NOT EXISTS support_messages (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    sender_role support_sender_role_enum NOT NULL,
+    sender_user_id INT NULL REFERENCES users(id) ON DELETE SET NULL,
+    content VARCHAR(1000) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_support_messages_user_created ON support_messages (user_id, created_at ASC, id ASC);
+
+-- 13. support_tickets
+CREATE TABLE IF NOT EXISTS support_tickets (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    ticket_code VARCHAR(20) NOT NULL UNIQUE,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    category VARCHAR(80) NOT NULL,
+    contact_email VARCHAR(255) NOT NULL,
+    detail VARCHAR(2000) NOT NULL,
+    status support_ticket_status_enum NOT NULL DEFAULT 'open',
+    admin_reply VARCHAR(2000) NULL,
+    replied_by_user_id INT NULL REFERENCES users(id) ON DELETE SET NULL,
+    replied_at TIMESTAMPTZ NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_status_created ON support_tickets (status ASC, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_user_created ON support_tickets (user_id, created_at DESC);
+```

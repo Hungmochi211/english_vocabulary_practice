@@ -597,6 +597,394 @@ paths:
         '403':
           $ref: '#/components/responses/ForbiddenError'
 
+  /auth/forgot-password:
+    post:
+      summary: Yêu cầu gửi mã OTP 6 chữ số khôi phục mật khẩu qua email
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  maxLength: 255
+      responses:
+        '200':
+          description: Đã tiếp nhận yêu cầu (phản hồi đồng nhất chống dò email)
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+
+  /auth/reset-password:
+    post:
+      summary: Xác thực OTP 6 chữ số và đặt lại mật khẩu mới (thu hồi toàn bộ phiên cũ)
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, otp, newPassword]
+              properties:
+                email:
+                  type: string
+                  format: email
+                otp:
+                  type: string
+                  pattern: '^\d{6}$'
+                newPassword:
+                  type: string
+                  minLength: 8
+                  maxLength: 72
+      responses:
+        '200':
+          description: Đặt lại mật khẩu thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmptySuccessResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /learning/history:
+    get:
+      summary: Lấy lịch sử các phiên làm bài đã hoàn thành kèm chi tiết từ vựng của học viên
+      tags: [Learning]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: Danh sách lịch sử làm bài phân trang
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /vocabularies/saved:
+    get:
+      summary: Lấy danh sách Sổ từ đã lưu của học viên hiện tại
+      tags: [SavedWords]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Danh sách từ vựng đã lưu
+
+  /vocabularies/{id}/save:
+    post:
+      summary: Lưu từ vựng vào Sổ từ cá nhân (idempotent)
+      tags: [SavedWords]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Đã lưu từ vựng vào Sổ từ
+    delete:
+      summary: Gỡ từ vựng khỏi Sổ từ cá nhân
+      tags: [SavedWords]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Đã gỡ từ vựng khỏi Sổ từ
+
+  /notifications:
+    get:
+      summary: Lấy danh sách thông báo của học viên hiện tại
+      tags: [Notifications]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Danh sách thông báo kèm số chưa đọc
+    post:
+      summary: Ghi nhận một thông báo học tập phát sinh cho học viên hiện tại
+      tags: [Notifications]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, body]
+              properties:
+                title:
+                  type: string
+                  maxLength: 150
+                body:
+                  type: string
+                  maxLength: 500
+                icon:
+                  type: string
+                  maxLength: 40
+                tone:
+                  type: string
+                  enum: [amber, green, blue, purple]
+                targetRoute:
+                  type: string
+                  maxLength: 200
+      responses:
+        '201':
+          description: Thông báo vừa tạo
+    delete:
+      summary: Xóa toàn bộ thông báo của học viên hiện tại
+      tags: [Notifications]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Đã xóa sạch thông báo
+
+  /notifications/read-all:
+    patch:
+      summary: Đánh dấu tất cả thông báo là đã đọc
+      tags: [Notifications]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Đã đánh dấu đọc toàn bộ
+
+  /notifications/{id}/read:
+    patch:
+      summary: Đánh dấu một thông báo là đã đọc
+      tags: [Notifications]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Đã cập nhật trạng thái đọc
+
+  /notifications/{id}:
+    delete:
+      summary: Xóa một thông báo của học viên hiện tại
+      tags: [Notifications]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Đã xóa thông báo
+
+  /support/messages:
+    get:
+      summary: Lấy lịch sử tin nhắn hỗ trợ của học viên hiện tại
+      tags: [Support]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Mảng tin nhắn trao đổi với Quản trị viên
+    post:
+      summary: Học viên gửi tin nhắn hỗ trợ
+      tags: [Support]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+      responses:
+        '201':
+          description: Tin nhắn vừa gửi kèm tin xác nhận tự động (nếu có)
+
+  /support/tickets:
+    get:
+      summary: Lấy danh sách phiếu góp ý của học viên hiện tại
+      tags: [Support]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Danh sách phiếu góp ý cá nhân
+    post:
+      summary: Học viên gửi phiếu góp ý / báo lỗi
+      tags: [Support]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [category, email, detail]
+              properties:
+                category:
+                  type: string
+                  maxLength: 80
+                email:
+                  type: string
+                  format: email
+                detail:
+                  type: string
+                  minLength: 5
+                  maxLength: 2000
+      responses:
+        '201':
+          description: Mã phiếu góp ý (`ticketId`) và thời điểm tiếp nhận
+
+  /admin/support/threads:
+    get:
+      summary: Danh sách hội thoại hỗ trợ của học viên (Chỉ Admin)
+      tags: [AdminSupport]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Danh sách hội thoại kèm tin nhắn cuối cùng
+
+  /admin/support/threads/{userId}/messages:
+    get:
+      summary: Xem toàn bộ tin nhắn hỗ trợ của một học viên (Chỉ Admin)
+      tags: [AdminSupport]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Danh sách tin nhắn của học viên đó
+    post:
+      summary: Quản trị viên trả lời tin nhắn hỗ trợ của học viên
+      tags: [AdminSupport]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+      responses:
+        '201':
+          description: Tin nhắn phản hồi vừa lưu
+
+  /admin/support/tickets:
+    get:
+      summary: Danh sách phiếu góp ý phân trang (Chỉ Admin)
+      tags: [AdminSupport]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [open, resolved]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Danh sách phiếu góp ý phân trang
+
+  /admin/support/tickets/{ticketId}/reply:
+    patch:
+      summary: Quản trị viên phản hồi và đóng phiếu góp ý
+      tags: [AdminSupport]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reply]
+              properties:
+                reply:
+                  type: string
+                  minLength: 1
+                  maxLength: 2000
+                status:
+                  type: string
+                  enum: [open, resolved]
+                  default: resolved
+      responses:
+        '200':
+          description: Phiếu góp ý sau khi phản hồi
+
 components:
   securitySchemes:
     bearerAuth:

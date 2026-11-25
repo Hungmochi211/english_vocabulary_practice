@@ -8,13 +8,20 @@ back-end/.env.*
 font-end/.env
 font-end/.env.*
 !font-end/.env.example
+font-end/web/.env
+font-end/web/.env.*
+!font-end/web/.env.example
 
 # Dependencies & build outputs
 node_modules/
 back-end/node_modules/
 back-end/dist/
+back-end/coverage/
 font-end/node_modules/
 font-end/dist/
+font-end/web/node_modules/
+font-end/web/dist/
+font-end/web/coverage/
 
 # Python virtual environment & cache
 .venv/

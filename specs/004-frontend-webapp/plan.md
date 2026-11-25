@@ -139,7 +139,7 @@ font-end/
     │   │   ├── common/                  # Skeleton, EmptyState, ErrorRetryBox, ConfirmModal, Toast
     │   │   └── support/                 # FloatingSupportWidget (4 kênh + Chat QTV + Góp ý)
     │   ├── features/
-    │   │   ├── auth/                    # LoginPage, RegisterPage, GoogleSignInButton
+    │   │   ├── auth/                    # LoginPage, RegisterPage, ForgotPasswordPage, GoogleSignInButton
     │   │   ├── dashboard/               # DashboardPage, DailyGoalRing, StatsCards, SrsWidget, WeeklyLeaderboard
     │   │   ├── courses/                 # CoursesRoadmapPage, LessonStudyPage (Bước 1), LessonPracticePage (Bước 2)
     │   │   ├── review/                  # ReviewCenterPage (4 chế độ + 5 Hộp Leitner + Mixed Quiz)
@@ -147,7 +147,7 @@ font-end/
     │   │   ├── ai-chat/                 # AiChatPage (Multi-conversation, Quick Prompts, Oxford v1)
     │   │   ├── history/                 # HistoryPage (4 KPIs, Filter, 10-row Scrollable Drawer, Quick Retry)
     │   │   ├── profile/                 # ProfilePage (Edit Profile, Avatar, Change Password, Reminder 20:00, Logout)
-    │   │   └── admin/                   # AdminDashboardPage, AdminUsersTable, AdminAuditLogsPage
+    │   │   └── admin/                   # AdminDashboardPage, AdminUsersTable, AdminAuditLogsPage, AdminSupportPage
     │   └── utils/
     │       ├── formatters.ts            # Format XP, initials, diacritic stripping, clamp responseTimeMs
     │       ├── fuzzySearch.ts           # Levenshtein suggestions cho tra từ điển

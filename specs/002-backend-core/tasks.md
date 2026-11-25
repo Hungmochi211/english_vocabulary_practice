@@ -171,6 +171,24 @@ description: "Actionable, dependency-ordered task list for 002-backend-core impl
 
 ---
 
+## Phase 9: User Story 6 — Cách ly Schema, OTP Quên Mật khẩu & Đồng bộ Cá nhân / Hỗ trợ (Priority: P2)
+
+**Goal**: Xử lý toàn bộ các hạng mục feedback phía Backend & CSDL (trừ AI Chat), chia theo đúng 6 đợt độc lập để kiểm thử và `git push` từng phần.
+
+**Independent Test**: Kiểm tra thư mục gốc sạch `schema_postgresql_v3.sql`, chạy pass `password-reset.e2e-spec.ts` và `user-sync-support.e2e-spec.ts` trong `back-end/tests/integration/`.
+
+- [X] T050 [US6] [Đợt 1] Di chuyển `schema_postgresql_v3.sql` sang `docs/archive/schema_postgresql_v3.sql` kèm khối cảnh báo rõ đầu tệp không nạp thủ công đè lên TypeORM migrations
+- [ ] T051 [US6] [Đợt 2 - Test] Viết Integration Test cho luồng OTP Quên/Đặt lại mật khẩu (`POST /auth/forgot-password`, `POST /auth/reset-password`, giới hạn gửi mã, sai quá 5 lần, thu hồi phiên cũ) tại `back-end/tests/integration/password-reset.e2e-spec.ts`
+- [ ] T052 [US6] [Đợt 2] Bổ sung `ForgotPasswordDto`, `ResetPasswordDto`, logic OTP SHA-256 trên Redis (TTL 10 phút) + gửi mail qua `nodemailer` và thu hồi phiên trong `back-end/src/modules/auth/`
+- [ ] T053 [US6] [Đợt 3 - Test] Viết Integration Test cho API Lịch sử học tập (`GET /learning/history` phân trang + chi tiết từng từ + cô lập theo `userId`) tại `back-end/tests/integration/user-sync-support.e2e-spec.ts`
+- [ ] T054 [US6] [Đợt 3] Cài đặt `GET /learning/history` đọc từ `quiz_attempts` và `quiz_attempt_answers` trong `back-end/src/modules/learning/learning.controller.ts` & `learning.service.ts`
+- [ ] T055 [US6] [Đợt 4] Tạo migration `back-end/src/database/migrations/1700000000003-CreateUserSyncAndSupportTables.ts` (4 bảng `user_saved_words`, `user_notifications`, `support_messages`, `support_tickets`) và đăng ký trong `back-end/src/config/database.config.ts`
+- [ ] T056 [US6] [Đợt 4] Bổ sung test + cài đặt API Sổ từ đã lưu (`GET /vocabularies/saved`, `POST /vocabularies/:id/save`, `DELETE /vocabularies/:id/save`) trong `back-end/src/modules/vocabulary/` và `back-end/tests/integration/user-sync-support.e2e-spec.ts`
+- [ ] T057 [US6] [Đợt 5] Bổ sung test + cài đặt module `NotificationsModule` (`/notifications`, `/:id/read`, `/read-all`, xóa thông báo, tự động tạo thông báo khi nộp bài thực hành) tại `back-end/src/modules/notifications/` và đăng ký vào `back-end/src/app.module.ts`
+- [ ] T058 [US6] [Đợt 6] Bổ sung test + cài đặt module `SupportModule` (`/support/messages`, `/support/tickets`, `/admin/support/threads`, `/admin/support/tickets/:id/reply` kèm đẩy thông báo & ghi `audit_logs`) tại `back-end/src/modules/support/` và đăng ký vào `back-end/src/app.module.ts`
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies

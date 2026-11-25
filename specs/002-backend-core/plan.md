@@ -104,14 +104,18 @@ back-end/
 │   │   └── auth.config.ts       # JWT, Google OAuth, Brute-force thresholds
 │   ├── database/
 │   │   └── migrations/
-│   │       └── 1700000000002-CreateCoreLearningTables.ts
+│   │       ├── 1700000000002-CreateCoreLearningTables.ts
+│   │       └── 1700000000003-CreateUserSyncAndSupportTables.ts
 │   └── modules/
-│       ├── auth/                # AuthController, AuthService, JwtStrategy, RateLimiterService
+│       ├── auth/                # AuthController, AuthService, JwtStrategy, RateLimiterService (+ OTP Password Reset)
 │       ├── users/               # UsersController, UsersService, User & RefreshSession entities
 │       ├── algorithm/           # Pure TS services: distractor, fisher-yates, stratified-sampling,
 │       │                        # damerau-levenshtein, phonetic (Soundex + Double Metaphone), sm2-leitner
-│       ├── learning/            # LearningController, LearningService, QuizGradingService,
+│       ├── learning/            # LearningController (+ GET /learning/history), LearningService, QuizGradingService,
 │       │                        # UserLessonProgress, QuizAttempt, QuizAttemptAnswer entities
+│       ├── vocabulary/          # + SavedWordsController & SavedWordsService (/vocabularies/saved)
+│       ├── notifications/       # NotificationsController, NotificationsService, UserNotification entity
+│       ├── support/             # SupportController, AdminSupportController, SupportService, SupportMessage & SupportTicket entities
 │       ├── review/              # ReviewController, ReviewService, UserSm2Review entity
 │       ├── gamification/        # StatsController, StreakService, StreakReminderCron, EmailQueueProcessor,
 │       │                        # UserStreak, DailyStudyLog entities

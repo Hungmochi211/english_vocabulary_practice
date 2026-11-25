@@ -57,6 +57,13 @@ Tài liệu này khóa chặt hợp đồng giao tiếp giữa Frontend (`font-e
 | Khóa / mở khóa tài khoản | `PATCH /admin/users/{userId}/status` | `role === 'admin'` + hộp thoại xác nhận |
 | Thống kê tổng quan hệ thống | `GET /admin/stats` | `role === 'admin'` |
 | Nhật ký kiểm toán | `GET /admin/audit-logs` | `role === 'admin'` |
+| Khôi phục mật khẩu (gửi OTP 6 số) | `POST /auth/forgot-password` | Guest / Public |
+| Đặt lại mật khẩu bằng OTP | `POST /auth/reset-password` | Guest / Public (thu hồi mọi phiên cũ) |
+| Lịch sử làm bài từ máy chủ | `GET /learning/history` | Đã đăng nhập |
+| Sổ từ đã lưu (danh sách / lưu / gỡ) | `GET /vocabularies/saved`, `POST /vocabularies/{id}/save`, `DELETE /vocabularies/{id}/save` | Đã đăng nhập |
+| Thông báo cá nhân | `GET/POST/DELETE /notifications`, `PATCH /notifications/{id}/read`, `PATCH /notifications/read-all`, `DELETE /notifications/{id}` | Đã đăng nhập |
+| Hỗ trợ & Góp ý (Học viên) | `GET/POST /support/messages`, `GET/POST /support/tickets` | Đã đăng nhập |
+| Quản lý Hỗ trợ & Góp ý (Admin) | `GET /admin/support/threads`, `GET/POST /admin/support/threads/{userId}/messages`, `GET /admin/support/tickets`, `PATCH /admin/support/tickets/{ticketId}/reply` | `role === 'admin'` |
 
 ---
 

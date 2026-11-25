@@ -1,4 +1,17 @@
 -- ============================================================================
+-- ⚠️ CẢNH BÁO QUAN TRỌNG (CHỈ LƯU TRỮ THAM KHẢO — KHÔNG CHẠY THỦ CÔNG VÀO DB VẬN HÀNH!)
+-- Tệp này là bản phác thảo thiết kế tổng thể cũ (19 bảng: decks, user_profiles,
+-- refresh_tokens, study_sessions...).
+--
+-- Hệ thống Backend thực tế (`back-end/`) khởi tạo và quản lý CSDL tự động 100%
+-- thông qua chuỗi TypeORM Migrations tại:
+--   `back-end/src/database/migrations/` (`npm run typeorm:migration:run`)
+--
+-- TUYỆT ĐỐI KHÔNG import tay tệp SQL này vào database đang chạy của Backend
+-- để tránh xung đột tên bảng, cột và kiểu ENUM!
+-- ============================================================================
+
+-- ============================================================================
 -- SCHEMA CƠ SỞ DỮ LIỆU POSTGRESQL 16+ & PGVECTOR — BẢN HỢP NHẤT v3.2 (FINAL)
 -- Dự án: Website Hỗ trợ Học Từ Vựng Tiếng Anh Thông Minh (Oxford 3000 - B1+)
 -- Đơn vị: Nhóm 51 - Lớp K68CNTTF - Khoa CNTT - Học viện Nông nghiệp Việt Nam

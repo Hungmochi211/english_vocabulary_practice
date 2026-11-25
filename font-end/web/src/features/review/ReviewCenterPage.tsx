@@ -479,6 +479,7 @@ export function ReviewCenterPage() {
                 ? 'quiz'
                 : 'typing';
       historyAdapter.record({
+        attemptId: result.attemptId ?? undefined,
         type: historyType,
         title: session.title,
         correct: result.correctCount,

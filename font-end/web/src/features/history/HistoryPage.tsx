@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   CheckCircle2,
   Clock,
@@ -10,6 +11,7 @@ import {
   X,
   XCircle,
 } from 'lucide-react';
+import { learningApi } from '@/services/api/learning.api';
 import { HISTORY_EVENT, historyAdapter } from '@/services/adapters/history.adapter';
 import { EmptyState } from '@/components/common/CommonUi';
 import { CustomSelect } from '@/components/common/CustomSelect';
@@ -37,17 +39,62 @@ const TYPE_OPTIONS: Array<{ value: '' | ActivityHistoryItem['type']; label: stri
 
 export function HistoryPage() {
   const navigate = useNavigate();
-  const [items, setItems] = useState<ActivityHistoryItem[]>(() => historyAdapter.list());
+  const [localItems, setLocalItems] = useState<ActivityHistoryItem[]>(() => historyAdapter.list());
   const [searchText, setSearchText] = useState('');
   const [typeFilter, setTypeFilter] = useState<'' | ActivityHistoryItem['type']>('');
   const [resultFilter, setResultFilter] = useState<'all' | 'pass' | 'fail'>('all');
   const [selectedItem, setSelectedItem] = useState<ActivityHistoryItem | null>(null);
 
+  const serverHistoryQuery = useQuery({
+    queryKey: ['learning', 'history'],
+    queryFn: () => learningApi.listHistory({ page: 1, limit: 50 }),
+  });
+
   useEffect(() => {
-    const sync = () => setItems(historyAdapter.list());
+    const sync = () => setLocalItems(historyAdapter.list());
     window.addEventListener(HISTORY_EVENT, sync);
     return () => window.removeEventListener(HISTORY_EVENT, sync);
   }, []);
+
+  const items = useMemo(() => {
+    const serverItems = serverHistoryQuery.data?.items ?? [];
+    if (serverItems.length === 0) {
+      return localItems;
+    }
+
+    const localByAttempt = new Map<number, ActivityHistoryItem>();
+    for (const loc of localItems) {
+      if (typeof loc.attemptId === 'number') {
+        localByAttempt.set(loc.attemptId, loc);
+      }
+    }
+
+    const seenAttemptIds = new Set<number>();
+    const mergedServer = serverItems.map((srv) => {
+      if (typeof srv.attemptId === 'number') {
+        seenAttemptIds.add(srv.attemptId);
+        const matchingLocal = localByAttempt.get(srv.attemptId);
+        if (matchingLocal) {
+          return {
+            ...srv,
+            type: matchingLocal.type,
+            title: matchingLocal.title || srv.title,
+            xp: matchingLocal.xp || srv.xp,
+            duration: matchingLocal.duration || srv.duration,
+          };
+        }
+      }
+      return srv;
+    });
+
+    const extraLocal = localItems.filter(
+      (loc) => typeof loc.attemptId !== 'number' || !seenAttemptIds.has(loc.attemptId),
+    );
+
+    return [...extraLocal, ...mergedServer].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  }, [localItems, serverHistoryQuery.data?.items]);
 
   const filtered = useMemo(() => {
     const q = searchText.trim().toLowerCase();

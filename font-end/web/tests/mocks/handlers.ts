@@ -364,9 +364,31 @@ let mockDb: MockDbState = createInitialMockDb();
 export function resetMockDb(): void {
   mockDb = createInitialMockDb();
   mockPasswordResetOtps.clear();
+  mockServerHistory.length = 0;
 }
 
 const mockPasswordResetOtps = new Map<string, { otp: string; attempts: number }>();
+const mockServerHistory: Array<{
+  id: string;
+  attemptId: number;
+  type: 'study' | 'pronunciation' | 'srs' | 'quiz' | 'typing' | 'dictation';
+  title: string;
+  correct: number;
+  total: number;
+  accuracy: number;
+  xp: number;
+  duration: string;
+  createdAt: string;
+  words: Array<{
+    vocabularyId: number;
+    word: string;
+    phonetic?: string;
+    meaning?: string;
+    userAnswer?: string | null;
+    gradingStatus?: GradingStatus;
+    ok: boolean;
+  }>;
+}> = [];
 
 export function getMockPasswordResetOtp(email: string): string | null {
   return mockPasswordResetOtps.get(email.trim().toLowerCase())?.otp ?? null;
@@ -1196,6 +1218,41 @@ export const handlers = [
       results,
     };
 
+    const lessonTitle = attempt.lessonId
+      ? mockDb.lessons.find((l) => l.lessonId === attempt.lessonId)?.title
+      : undefined;
+    mockServerHistory.unshift({
+      id: `attempt-${attemptId}`,
+      attemptId,
+      type:
+        attempt.attemptType === 'sm2_review'
+          ? 'srs'
+          : attempt.attemptType === 'mixed_quiz'
+            ? 'quiz'
+            : 'typing',
+      title:
+        attempt.attemptType === 'sm2_review'
+          ? 'Phiên ôn tập SM-2 chính thức'
+          : attempt.attemptType === 'mixed_quiz'
+            ? 'Bài kiểm tra tổng hợp (Mixed Quiz)'
+            : `Thực hành Bước 2 — ${lessonTitle || `Bài #${attempt.lessonId ?? 1}`}`,
+      correct: exactCount,
+      total: totalQuestions,
+      accuracy: scorePercent,
+      xp: xpEarned,
+      duration: '01:00',
+      createdAt: new Date().toISOString(),
+      words: results.map((r) => ({
+        vocabularyId: r.vocabularyId,
+        word: r.word,
+        phonetic: r.phonetic,
+        meaning: r.vietnameseMeaning,
+        userAnswer: r.userAnswer,
+        gradingStatus: r.gradingStatus,
+        ok: r.gradingStatus === 'exact',
+      })),
+    });
+
     return HttpResponse.json({
       success: true,
       data: submitResult,
@@ -1283,6 +1340,27 @@ export const handlers = [
         limit,
         total: mockDb.auditLogs.length,
         totalPages: Math.max(1, Math.ceil(mockDb.auditLogs.length / limit)),
+      },
+      error: null,
+    });
+  }),
+
+  http.get(`${API_BASE}/learning/history`, async ({ request }) => {
+    const url = new URL(request.url);
+    const page = Math.max(1, Number(url.searchParams.get('page') ?? 1));
+    const limit = Math.max(1, Number(url.searchParams.get('limit') ?? 50));
+    const start = (page - 1) * limit;
+    const paged = mockServerHistory.slice(start, start + limit);
+    return HttpResponse.json({
+      success: true,
+      data: {
+        items: paged,
+        pagination: {
+          page,
+          limit,
+          total: mockServerHistory.length,
+          totalPages: Math.max(1, Math.ceil(mockServerHistory.length / limit)),
+        },
       },
       error: null,
     });

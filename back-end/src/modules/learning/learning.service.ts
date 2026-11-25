@@ -12,7 +12,7 @@ import {
 } from '../algorithm/distractor.service';
 import { StratifiedSamplingService } from '../algorithm/stratified-sampling.service';
 import { stripCorrectAnswerFromSnapshot } from '../review/review.service';
-import { LessonsQueryDto } from './dto/learning.dto';
+import { HistoryQueryDto, LessonsQueryDto } from './dto/learning.dto';
 
 @Injectable()
 export class LearningService {
@@ -325,6 +325,140 @@ export class LearningService {
       attemptType: 'mixed_quiz',
       totalQuestions: snapshot.length,
       questions: stripCorrectAnswerFromSnapshot(snapshot),
+    };
+  }
+
+  async getHistoryPaginated(userId: number, query: HistoryQueryDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 50;
+    const offset = (page - 1) * limit;
+
+    const [attemptRows, totalRows] = await Promise.all([
+      this.dataSource.query(
+        `
+        SELECT
+          a.id,
+          a.lesson_id AS "lessonId",
+          l.title AS "lessonTitle",
+          a.attempt_type AS "attemptType",
+          a.total_questions AS "totalQuestions",
+          a.total_score::float AS "totalScore",
+          a.score_percentage::float AS "scorePercentage",
+          a.started_at AS "startedAt",
+          a.submitted_at AS "submittedAt"
+        FROM quiz_attempts a
+        LEFT JOIN lessons l ON l.id = a.lesson_id
+        WHERE a.user_id = $1 AND a.status = 'submitted'
+        ORDER BY a.submitted_at DESC NULLS LAST, a.id DESC
+        LIMIT $2 OFFSET $3;
+        `,
+        [userId, limit, offset],
+      ),
+      this.dataSource.query(
+        `SELECT COUNT(*)::int AS total FROM quiz_attempts WHERE user_id = $1 AND status = 'submitted';`,
+        [userId],
+      ),
+    ]);
+
+    const total = totalRows[0]?.total ?? 0;
+    const attemptIds: number[] = attemptRows.map((r: Record<string, unknown>) => Number(r.id));
+
+    const wordsByAttempt = new Map<
+      number,
+      Array<{
+        vocabularyId: number;
+        word: string;
+        phonetic: string;
+        meaning: string;
+        userAnswer: string | null;
+        gradingStatus: string;
+        ok: boolean;
+      }>
+    >();
+
+    if (attemptIds.length > 0) {
+      const answerRows = await this.dataSource.query(
+        `
+        SELECT
+          qa.attempt_id AS "attemptId",
+          qa.vocabulary_id AS "vocabularyId",
+          v.word,
+          v.phonetic,
+          v.vietnamese_meaning AS "meaning",
+          qa.user_answer AS "userAnswer",
+          qa.grading_status AS "gradingStatus"
+        FROM quiz_attempt_answers qa
+        INNER JOIN vocabularies v ON v.id = qa.vocabulary_id
+        WHERE qa.attempt_id = ANY($1::int[])
+        ORDER BY qa.id ASC;
+        `,
+        [attemptIds],
+      );
+
+      for (const ans of answerRows) {
+        const aid = Number(ans.attemptId);
+        if (!wordsByAttempt.has(aid)) {
+          wordsByAttempt.set(aid, []);
+        }
+        wordsByAttempt.get(aid)!.push({
+          vocabularyId: Number(ans.vocabularyId),
+          word: String(ans.word),
+          phonetic: String(ans.phonetic ?? ''),
+          meaning: String(ans.meaning ?? ''),
+          userAnswer: typeof ans.userAnswer === 'string' ? ans.userAnswer : null,
+          gradingStatus: String(ans.gradingStatus),
+          ok: ans.gradingStatus === 'exact',
+        });
+      }
+    }
+
+    const items = attemptRows.map((r: Record<string, unknown>) => {
+      const attemptId = Number(r.id);
+      const attemptType = String(r.attemptType);
+      const words = wordsByAttempt.get(attemptId) ?? [];
+      const startedMs = r.startedAt ? new Date(String(r.startedAt)).getTime() : Date.now();
+      const submittedMs = r.submittedAt ? new Date(String(r.submittedAt)).getTime() : startedMs;
+      const elapsedSec = Math.max(1, Math.round((submittedMs - startedMs) / 1000));
+      const mm = String(Math.floor(elapsedSec / 60)).padStart(2, '0');
+      const ss = String(elapsedSec % 60).padStart(2, '0');
+
+      const type =
+        attemptType === 'sm2_review'
+          ? 'srs'
+          : attemptType === 'mixed_quiz'
+            ? 'quiz'
+            : 'typing';
+
+      const title =
+        attemptType === 'sm2_review'
+          ? 'Phiên ôn tập SM-2 chính thức'
+          : attemptType === 'mixed_quiz'
+            ? 'Bài kiểm tra tổng hợp (Mixed Quiz)'
+            : `Thực hành Bước 2 — ${r.lessonTitle ? String(r.lessonTitle) : `Bài #${r.lessonId ?? ''}`}`;
+
+      return {
+        id: `attempt-${attemptId}`,
+        attemptId,
+        type,
+        title,
+        correct: words.filter((w) => w.ok).length,
+        total: Number(r.totalQuestions ?? words.length),
+        accuracy: Math.round(Number(r.scorePercentage ?? 0)),
+        xp: Math.max(0, Math.round(Number(r.totalScore ?? 0) * 10)),
+        duration: `${mm}:${ss}`,
+        createdAt: new Date(String(r.submittedAt ?? r.startedAt ?? new Date().toISOString())).toISOString(),
+        words,
+      };
+    });
+
+    return {
+      items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
     };
   }
 }

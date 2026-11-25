@@ -275,11 +275,14 @@ export interface ActivityHistoryWord {
   word: string;
   phonetic?: string;
   meaning?: string;
+  userAnswer?: string | null;
+  gradingStatus?: GradingStatus;
   ok: boolean;
 }
 
 export interface ActivityHistoryItem {
   id: string;
+  attemptId?: number;
   type: 'study' | 'pronunciation' | 'srs' | 'quiz' | 'typing' | 'dictation';
   title: string;
   correct: number;

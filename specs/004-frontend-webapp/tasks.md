@@ -247,7 +247,7 @@
 
 - [x] T071 [US1] [Đợt 2] Bổ sung `forgotPassword` & `resetPassword` trong `font-end/web/src/services/api/auth.api.ts`, tạo trang `ForgotPasswordPage.tsx` (nhập email gửi OTP 6 số + đặt lại mật khẩu mới), gắn link ở `LoginPage.tsx` & route `/forgot-password` tại `router.tsx`
 - [x] T072 [US1] [Đợt 2 - Test] Bổ sung MSW handlers và Integration Test cho luồng Quên mật khẩu OTP trên Frontend tại `font-end/web/tests/integration/account-recovery-sync.test.tsx`
-- [ ] T073 [US5] [Đợt 3] Bổ sung `listHistory` trong `font-end/web/src/services/api/learning.api.ts` và nâng cấp `HistoryPage.tsx` đồng bộ lịch sử từ máy chủ (hợp nhất an toàn với phiên tự luyện cục bộ) + test tại `account-recovery-sync.test.tsx`
+- [x] T073 [US5] [Đợt 3] Bổ sung `listHistory` trong `font-end/web/src/services/api/learning.api.ts` và nâng cấp `HistoryPage.tsx` đồng bộ lịch sử từ máy chủ (hợp nhất an toàn với phiên tự luyện cục bộ) + test tại `account-recovery-sync.test.tsx`
 - [ ] T074 [US6] [Đợt 4] Bổ sung API Sổ từ đã lưu (`listSavedWords`, `saveWord`, `unsaveWord`) trong `vocabulary.api.ts`, đồng bộ `savedWords.adapter.ts` / `DictionaryPage.tsx` / `ReviewCenterPage.tsx` với máy chủ (giữ nguyên chế độ tự luyện khi bấm Ôn Sổ từ) + test tại `account-recovery-sync.test.tsx`
 - [ ] T075 [US5] [Đợt 5] Tạo `font-end/web/src/services/api/notifications.api.ts` và nâng cấp `notifications.adapter.ts` / `NotificationBell.tsx` đồng bộ danh sách, đánh dấu đã đọc và xóa thông báo với máy chủ + test tại `account-recovery-sync.test.tsx`
 - [ ] T076 [US7] [Đợt 6] Tạo `font-end/web/src/services/api/support.api.ts`, nâng cấp `support.adapter.ts` / `FloatingSupportWidget.tsx` lưu tin nhắn & phiếu góp ý lên máy chủ

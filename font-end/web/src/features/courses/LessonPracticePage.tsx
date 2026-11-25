@@ -120,6 +120,7 @@ export function LessonPracticePage() {
       const elapsedSec = Math.max(1, Math.round((Date.now() - sessionStartRef.current) / 1000));
       const formattedDuration = `${String(Math.floor(elapsedSec / 60)).padStart(2, '0')}:${String(elapsedSec % 60).padStart(2, '0')}`;
       historyAdapter.record({
+        attemptId: result.attemptId ?? undefined,
         type: 'typing',
         title: `Thực hành Bước 2 — Bài #${lessonId}`,
         correct: result.correctCount,

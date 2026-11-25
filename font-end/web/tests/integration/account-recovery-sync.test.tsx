@@ -8,7 +8,9 @@ import { AuthProvider } from '@/app/AuthProvider';
 import { ThemeProvider } from '@/app/ThemeProvider';
 import { ToastProvider } from '@/components/common/CommonUi';
 import { AppRoutes } from '@/app/router';
-import { getMockPasswordResetOtp } from '../mocks/handlers';
+import { setStoredSession } from '@/services/api/httpClient';
+import { historyAdapter } from '@/services/adapters/history.adapter';
+import { getMockPasswordResetOtp, mockLearnerUser } from '../mocks/handlers';
 
 function renderApp(initialPath = '/forgot-password') {
   const client = createAppQueryClient();
@@ -53,5 +55,45 @@ describe('Account Recovery & Server Sync Suite (002/004 Upgrade)', () => {
     await user.click(screen.getByRole('button', { name: /Xác nhận đặt lại mật khẩu/i }));
 
     expect(await screen.findByRole('status')).toHaveTextContent(/Đặt lại mật khẩu thành công/i);
+  });
+
+  it('Wave 3 (US6-AS3 / FR-017): restores submitted learning history and word breakdown from server after clearing localStorage', async () => {
+    setStoredSession({
+      accessToken: 'mock-access-learner',
+      refreshToken: 'mock-refresh-learner',
+      expiresInSeconds: 900,
+      user: mockLearnerUser,
+    });
+
+    const user = userEvent.setup();
+    const { unmount } = renderApp('/review');
+
+    // Start & submit an official SM-2 review session
+    await user.click(await screen.findByRole('button', { name: /Gõ từ/i }));
+    await user.click(screen.getByRole('button', { name: /Bắt đầu ôn tập/i }));
+
+    const answers = ['peaceful', 'phone', 'go'];
+    for (let i = 0; i < answers.length; i++) {
+      const input = await screen.findByLabelText(/Nhập từ tiếng Anh/i);
+      await user.clear(input);
+      await user.type(input, answers[i]);
+      await user.click(
+        screen.getByRole('button', { name: i < 2 ? /Tiếp theo/i : /Nộp bài & Chấm điểm/i }),
+      );
+    }
+    expect(await screen.findByText(/Tổng kết phiên ôn tập/i)).toBeInTheDocument();
+    unmount();
+
+    // Simulate switching browser / wiping local history storage
+    historyAdapter.clear();
+    expect(historyAdapter.list()).toHaveLength(0);
+
+    // Open /history -> session and word breakdown are fetched from GET /learning/history
+    renderApp('/history');
+    const row = await screen.findByText(/Phiên ôn tập SM-2 chính thức/i);
+    expect(row).toBeInTheDocument();
+
+    await user.click(row);
+    expect(await screen.findByText('peaceful')).toBeInTheDocument();
   });
 });

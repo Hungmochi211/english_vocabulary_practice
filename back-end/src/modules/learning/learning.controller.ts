@@ -13,7 +13,7 @@ import {
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { LearningService } from './learning.service';
 import { QuizGradingService } from './quiz-grading.service';
-import { LessonsQueryDto, MixedQuizStartDto } from './dto/learning.dto';
+import { HistoryQueryDto, LessonsQueryDto, MixedQuizStartDto } from './dto/learning.dto';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import {
@@ -37,6 +37,14 @@ export class LearningController {
     @Query() query: LessonsQueryDto,
   ) {
     return this.learningService.getLessonsWithProgress(user.id, query);
+  }
+
+  @Get('history')
+  async getHistory(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: HistoryQueryDto,
+  ) {
+    return this.learningService.getHistoryPaginated(user.id, query);
   }
 
   @Post('lessons/:lessonId/cards/:vocabularyId/open')

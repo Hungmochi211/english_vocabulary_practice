@@ -21,6 +21,7 @@ export async function invalidateLearningCaches(client: QueryClient = queryClient
   await Promise.all([
     client.invalidateQueries({ queryKey: ['stats', 'overview'] }),
     client.invalidateQueries({ queryKey: ['learning', 'lessons'] }),
+    client.invalidateQueries({ queryKey: ['learning', 'history'] }),
     client.invalidateQueries({ queryKey: ['reviews', 'due'] }),
     client.invalidateQueries({ queryKey: ['users', 'me'] }),
   ]);

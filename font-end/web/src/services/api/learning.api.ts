@@ -1,12 +1,15 @@
 import { httpClient } from '@/services/api/httpClient';
 import {
   normalizeLessonProgress,
+  normalizePaginatedData,
   normalizeQuizAttemptStart,
   normalizeQuizSubmitResult,
 } from '@/services/api/normalizers';
 import type {
+  ActivityHistoryItem,
   CefrLevel,
   LessonProgressItem,
+  PaginatedData,
   QuizAnswerSubmission,
   QuizAttemptStart,
   QuizSubmitResult,
@@ -45,5 +48,16 @@ export const learningApi = {
       answers,
     });
     return normalizeQuizSubmitResult(raw);
+  },
+
+  async listHistory(params?: {
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedData<ActivityHistoryItem>> {
+    const query: Record<string, number> = {};
+    if (params?.page) query.page = Math.max(1, params.page);
+    if (params?.limit) query.limit = Math.max(1, Math.min(100, params.limit));
+    const raw = await httpClient.get<unknown>('/learning/history', { params: query });
+    return normalizePaginatedData<ActivityHistoryItem>(raw);
   },
 };

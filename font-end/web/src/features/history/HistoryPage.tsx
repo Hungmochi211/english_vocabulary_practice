@@ -12,13 +12,14 @@ import {
 } from 'lucide-react';
 import { HISTORY_EVENT, historyAdapter } from '@/services/adapters/history.adapter';
 import { EmptyState } from '@/components/common/CommonUi';
+import { CustomSelect } from '@/components/common/CustomSelect';
 import { formatXp } from '@/utils/formatters';
 import type { ActivityHistoryItem } from '@/types/models';
 
 const TYPE_LABELS: Record<ActivityHistoryItem['type'], string> = {
   study: 'Học thẻ Bước 1',
   pronunciation: 'Phát âm',
-  srs: 'Thẻ SM-2',
+  srs: 'Thẻ ghi nhớ',
   quiz: 'Trắc nghiệm',
   typing: 'Gõ từ',
   dictation: 'Nghe chép',
@@ -28,7 +29,7 @@ const TYPE_OPTIONS: Array<{ value: '' | ActivityHistoryItem['type']; label: stri
   { value: '', label: 'Tất cả loại' },
   { value: 'study', label: 'Học thẻ Bước 1' },
   { value: 'pronunciation', label: 'Phát âm' },
-  { value: 'srs', label: 'Thẻ SM-2' },
+  { value: 'srs', label: 'Thẻ ghi nhớ' },
   { value: 'quiz', label: 'Trắc nghiệm' },
   { value: 'typing', label: 'Gõ từ' },
   { value: 'dictation', label: 'Nghe chép' },
@@ -96,7 +97,7 @@ export function HistoryPage() {
             Lịch sử Học & Ôn tập
           </h1>
           <p className="mt-1 text-sm text-slate-600">
-            Theo dõi toàn bộ các phiên học 2 bước, ôn tập SM-2 và bấm vào từng phiên để xem từ đúng/sai hoặc ôn lại nhanh.
+            Theo dõi toàn bộ các phiên học 2 bước, phiên ôn tập và bấm vào từng phiên để xem từ đúng/sai hoặc ôn lại nhanh.
           </p>
         </div>
         <span className="inline-flex items-center gap-1.5 self-start rounded-full border border-indigo-100 bg-indigo-50 px-3.5 py-1.5 text-xs font-bold text-indigo-700 sm:self-auto">
@@ -148,29 +149,25 @@ export function HistoryPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <select
-            aria-label="Lọc loại hoạt động"
+          <CustomSelect
+            ariaLabel="Lọc loại hoạt động"
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as '' | ActivityHistoryItem['type'])}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
-          >
-            {TYPE_OPTIONS.map((opt) => (
-              <option key={opt.label} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => setTypeFilter(val as '' | ActivityHistoryItem['type'])}
+            options={TYPE_OPTIONS}
+            align="right"
+          />
 
-          <select
-            aria-label="Lọc kết quả"
+          <CustomSelect
+            ariaLabel="Lọc kết quả"
             value={resultFilter}
-            onChange={(e) => setResultFilter(e.target.value as 'all' | 'pass' | 'fail')}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
-          >
-            <option value="all">Mọi kết quả</option>
-            <option value="pass">Đạt (≥ 80%)</option>
-            <option value="fail">Cần cải thiện (&lt; 80%)</option>
-          </select>
+            onChange={(val) => setResultFilter(val as 'all' | 'pass' | 'fail')}
+            options={[
+              { value: 'all', label: 'Mọi kết quả' },
+              { value: 'pass', label: 'Đạt (≥ 80%)' },
+              { value: 'fail', label: 'Cần cải thiện (< 80%)' },
+            ]}
+            align="right"
+          />
         </div>
       </section>
 
@@ -180,7 +177,7 @@ export function HistoryPage() {
           <div className="p-6">
             <EmptyState
               title="Chưa có phiên hoạt động nào"
-              description="Hoàn thành Bước 1, Bước 2 hoặc một phiên ôn SM-2 để lịch sử học tập tự động cập nhật tại đây."
+              description="Hoàn thành Bước 1, Bước 2 hoặc một phiên ôn tập để lịch sử học tập tự động cập nhật tại đây."
             />
           </div>
         ) : (

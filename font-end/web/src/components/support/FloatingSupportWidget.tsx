@@ -15,6 +15,7 @@ import { OPEN_SUPPORT_WIDGET_EVENT } from '@/components/layout/AccountMenu';
 import { supportAdapter } from '@/services/adapters/support.adapter';
 import { notificationsAdapter } from '@/services/adapters/notifications.adapter';
 import { useToast } from '@/components/common/CommonUi';
+import { CustomSelect } from '@/components/common/CustomSelect';
 import type { SupportMessage } from '@/types/models';
 
 type SupportView = 'menu' | 'chat' | 'feedback' | 'courses' | 'community';
@@ -233,16 +234,18 @@ export function FloatingSupportWidget() {
                   <label htmlFor="support-category" className="mb-1 block text-xs font-bold text-slate-700">
                     Danh mục
                   </label>
-                  <select
+                  <CustomSelect
                     id="support-category"
+                    ariaLabel="Danh mục góp ý"
                     value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800"
-                  >
-                    <option value="Góp ý tính năng">Góp ý tính năng</option>
-                    <option value="Báo lỗi kỹ thuật">Báo lỗi kỹ thuật</option>
-                    <option value="Sai sót từ vựng">Sai sót từ vựng</option>
-                  </select>
+                    onChange={(val) => setCategory(val)}
+                    options={[
+                      { value: 'Góp ý tính năng', label: 'Góp ý tính năng' },
+                      { value: 'Báo lỗi kỹ thuật', label: 'Báo lỗi kỹ thuật' },
+                      { value: 'Sai sót từ vựng', label: 'Sai sót từ vựng' },
+                    ]}
+                    fullWidth
+                  />
                 </div>
 
                 <div>
@@ -271,13 +274,13 @@ export function FloatingSupportWidget() {
 
             {view === 'courses' && (
               <div className="space-y-3 text-xs text-slate-600">
-                <p className="font-bold text-slate-900">Lộ trình đề xuất theo mục tiêu CEFR:</p>
+                <p className="font-bold text-slate-900">Lộ trình đề xuất theo mục tiêu trình độ:</p>
                 <ul className="list-disc space-y-1.5 pl-4">
                   <li>
                     <strong>A1–A2:</strong> 15 từ/ngày, tập trung Bước 1 Flashcard & Trắc nghiệm.
                   </li>
                   <li>
-                    <strong>B1–B2:</strong> 20 từ/ngày, ưu tiên Gõ từ & Nghe chép chính tả SM-2.
+                    <strong>B1–B2:</strong> 20 từ/ngày, ưu tiên Gõ từ & Nghe chép chính tả.
                   </li>
                 </ul>
                 <Link
@@ -294,7 +297,7 @@ export function FloatingSupportWidget() {
               <div className="space-y-3 text-xs text-slate-600">
                 <p className="font-bold text-slate-900">Cộng đồng học tập LexiTag</p>
                 <p>
-                  Tham gia thi đua XP hằng tuần cùng nhóm học viên CEFR để duy trì chuỗi Streak và chia sẻ mẹo ghi nhớ Oxford 3000.
+                  Tham gia thi đua XP hằng tuần cùng nhóm học viên để duy trì chuỗi Streak và chia sẻ mẹo ghi nhớ Oxford 3000.
                 </p>
                 <Link
                   to="/"

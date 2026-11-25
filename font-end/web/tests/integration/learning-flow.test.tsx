@@ -47,7 +47,7 @@ describe('T021 - US2: Dashboard Overview & 2-Step Learning Flow', () => {
     const user = userEvent.setup();
     renderAuthenticatedApp('/courses');
 
-    expect(await screen.findByRole('heading', { name: /Khóa học & Lộ trình CEFR/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Khóa học & Lộ trình học/i })).toBeInTheDocument();
     expect(await screen.findByText(/Daily Routines & Peace/i)).toBeInTheDocument();
     expect(screen.getByText(/Morning Habits/i)).toBeInTheDocument();
     expect(screen.getByText(/Green Planet Basics/i)).toBeInTheDocument();

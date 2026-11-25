@@ -79,7 +79,7 @@ describe('US1 - Authentication & Route Protection', () => {
     await user.type(screen.getByLabelText(/Mật khẩu/i), 'Password123!');
     await user.click(screen.getByRole('button', { name: /^Đăng nhập$/i }));
 
-    expect(await screen.findByRole('heading', { name: /Khóa học & Lộ trình CEFR/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Khóa học & Lộ trình học/i })).toBeInTheDocument();
   });
 
   it('AS-5: logs out via confirmation modal and clears persisted session', async () => {

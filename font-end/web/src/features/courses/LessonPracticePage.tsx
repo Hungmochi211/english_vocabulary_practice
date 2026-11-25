@@ -7,7 +7,6 @@ import {
   Award,
   CheckCircle2,
   RefreshCw,
-  Volume2,
   XCircle,
 } from 'lucide-react';
 import { learningApi } from '@/services/api/learning.api';
@@ -15,7 +14,7 @@ import { ApiError } from '@/services/api/httpClient';
 import { invalidateLearningCaches } from '@/app/queryClient';
 import { clampResponseTimeMs } from '@/utils/formatters';
 import { getGradingFeedbackMeta } from '@/utils/gradingFeedback';
-import { useVocabularyAudio } from '@/hooks/useVocabularyAudio';
+import { AudioPlayerControls } from '@/components/common/AudioPlayerControls';
 import { ErrorRetryBox, Skeleton, useToast } from '@/components/common/CommonUi';
 import { historyAdapter } from '@/services/adapters/history.adapter';
 import { notificationsAdapter } from '@/services/adapters/notifications.adapter';
@@ -31,7 +30,6 @@ export function LessonPracticePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { play } = useVocabularyAudio();
 
   const [attempt, setAttempt] = useState<QuizAttemptStart | null>(null);
   const [loading, setLoading] = useState(true);
@@ -361,36 +359,12 @@ export function LessonPracticePage() {
                     {currentQuestion.prompt.phonetic}
                   </p>
                 )}
-                <div className="mt-3 flex justify-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void play({
-                        word: currentQuestion.prompt.word ?? '',
-                        audioUrl: currentQuestion.prompt.audioUrl,
-                        rate: 1,
-                      })
-                    }
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700"
-                  >
-                    <Volume2 className="h-3.5 w-3.5" />
-                    <span>Nghe 1.0×</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void play({
-                        word: currentQuestion.prompt.word ?? '',
-                        audioUrl: currentQuestion.prompt.audioUrl,
-                        rate: 0.7,
-                      })
-                    }
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700"
-                  >
-                    <Volume2 className="h-3.5 w-3.5" />
-                    <span>Chậm 0.7×</span>
-                  </button>
-                </div>
+                <AudioPlayerControls
+                  word={currentQuestion.prompt.word ?? ''}
+                  audioUrl={currentQuestion.prompt.audioUrl}
+                  align="center"
+                  className="mt-3"
+                />
               </div>
             ) : (
               <>
@@ -412,36 +386,10 @@ export function LessonPracticePage() {
             )}
 
             {currentQuestion.practiceMode === 'dictation' && (
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    void play({
-                      word: currentQuestion.prompt.word ?? currentQuestion.prompt.vietnameseMeaning ?? '',
-                      audioUrl: currentQuestion.prompt.audioUrl,
-                      rate: 1,
-                    })
-                  }
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-3.5 py-2 text-xs font-bold text-indigo-700"
-                >
-                  <Volume2 className="h-4 w-4" />
-                  <span>Nghe phát âm 1.0×</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    void play({
-                      word: currentQuestion.prompt.word ?? currentQuestion.prompt.vietnameseMeaning ?? '',
-                      audioUrl: currentQuestion.prompt.audioUrl,
-                      rate: 0.7,
-                    })
-                  }
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-700"
-                >
-                  <Volume2 className="h-4 w-4" />
-                  <span>Chậm 0.7×</span>
-                </button>
-              </div>
+              <AudioPlayerControls
+                word={currentQuestion.prompt.word ?? currentQuestion.prompt.vietnameseMeaning ?? ''}
+                audioUrl={currentQuestion.prompt.audioUrl}
+              />
             )}
 
             {currentQuestion.practiceMode === 'multiple_choice' && currentQuestion.prompt.options ? (

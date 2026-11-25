@@ -92,12 +92,12 @@ export function AiChatPage() {
             Trợ lý AI Học Từ Vựng
           </h1>
           <p className="mt-1 text-sm text-slate-600">
-            Giải thích nghĩa, phiên âm IPA và câu ví dụ song ngữ theo kho Oxford 3000 (phiên bản v1 sẵn sàng nối API AI).
+            Giải thích nghĩa, phiên âm IPA và câu ví dụ song ngữ theo kho từ vựng Oxford 3000.
           </p>
         </div>
         <span className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-700 sm:self-auto">
           <Sparkles className="h-3.5 w-3.5" />
-          <span>Oxford 3000 Assistant v1</span>
+          <span>Trợ lý Oxford 3000</span>
         </span>
       </header>
 

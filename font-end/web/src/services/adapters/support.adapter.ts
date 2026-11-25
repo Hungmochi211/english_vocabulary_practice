@@ -17,7 +17,7 @@ function readMessages(): SupportMessage[] {
         {
           id: 'sup-welcome',
           sender: 'admin',
-          text: 'Chào bạn! Đội ngũ Quản trị viên LexiTag luôn sẵn sàng hỗ trợ về tài khoản, lộ trình CEFR và góp ý sản phẩm.',
+          text: 'Chào bạn! Đội ngũ Quản trị viên LexiTag luôn sẵn sàng hỗ trợ về tài khoản, lộ trình học và góp ý sản phẩm.',
           createdAt: new Date().toISOString(),
         },
       ];

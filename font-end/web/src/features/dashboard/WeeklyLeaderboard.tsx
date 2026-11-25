@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Award, Crown, Flame, Trophy, Users, X, Zap } from 'lucide-react';
+import { Crown, Flame, Trophy, Users, X, Zap } from 'lucide-react';
 import { useAuth } from '@/app/AuthProvider';
-import {
-  formatRankBadgeLabel,
-  leaderboardAdapter,
-} from '@/services/adapters/leaderboard.adapter';
+import { leaderboardAdapter } from '@/services/adapters/leaderboard.adapter';
 import { EmptyState, ErrorRetryBox, Skeleton } from '@/components/common/CommonUi';
+import { RankBadge } from '@/components/common/RankBadge';
 import { formatXp, getInitials } from '@/utils/formatters';
 import type { CefrLevel, LeaderboardMember } from '@/types/models';
 
@@ -160,10 +158,8 @@ export function QuickProfileModal({
       }}
     >
       <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
-        <div className="flex items-start justify-between">
-          <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700">
-            {formatRankBadgeLabel(member.rank)}
-          </span>
+        <div className="flex items-start justify-between gap-2">
+          <RankBadge rank={member.rank} size="sm" />
           <button
             type="button"
             aria-label="Đóng hồ sơ nhanh"
@@ -181,7 +177,7 @@ export function QuickProfileModal({
               {member.fullName}
             </h3>
             <p className="text-xs font-semibold text-slate-500">
-              Mục tiêu CEFR {member.level} • Thành viên nhóm học
+              Mục tiêu trình độ {member.level} • Thành viên nhóm học
             </p>
           </div>
         </div>
@@ -348,10 +344,9 @@ export function WeeklyLeaderboardWidget({
             </h2>
           </div>
           {me && (
-            <p className="mt-1 inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700">
-              <Award className="h-3.5 w-3.5" />
-              <span>{formatRankBadgeLabel(me.rank)}</span>
-            </p>
+            <div className="mt-2">
+              <RankBadge rank={me.rank} size="sm" />
+            </div>
           )}
         </div>
 

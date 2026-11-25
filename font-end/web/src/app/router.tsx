@@ -5,6 +5,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { Skeleton } from '@/components/common/CommonUi';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { RegisterPage } from '@/features/auth/RegisterPage';
+import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { CoursesRoadmapPage } from '@/features/courses/CoursesRoadmapPage';
 import { LessonStudyPage } from '@/features/courses/LessonStudyPage';
@@ -87,6 +88,7 @@ export function AppRoutes() {
         <Route element={<GuestOnlyRoute />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         </Route>
 
         <Route element={<ProtectedRoute />}>

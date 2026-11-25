@@ -7,11 +7,10 @@ import {
   CheckCircle2,
   Lock,
   RotateCcw,
-  Volume2,
 } from 'lucide-react';
 import { vocabularyApi } from '@/services/api/vocabulary.api';
 import { learningApi } from '@/services/api/learning.api';
-import { useVocabularyAudio } from '@/hooks/useVocabularyAudio';
+import { AudioPlayerControls } from '@/components/common/AudioPlayerControls';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { ErrorRetryBox, Skeleton, useToast } from '@/components/common/CommonUi';
 import { ApiError } from '@/services/api/httpClient';
@@ -47,7 +46,6 @@ export function LessonStudyPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { play } = useVocabularyAudio();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -255,38 +253,12 @@ export function LessonStudyPage() {
             <p className="mt-2 font-mono text-base text-slate-500">{currentVocab.phonetic}</p>
 
             {/* 2-Speed Audio Controls */}
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
-              <button
-                type="button"
-                onClick={() =>
-                  void play({
-                    word: currentVocab.word,
-                    audioUrl: currentVocab.audioUrl,
-                    rate: 1,
-                    accent: 'en-US',
-                  })
-                }
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-700"
-              >
-                <Volume2 className="h-4 w-4" />
-                <span>Nghe chuẩn 1.0×</span>
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  void play({
-                    word: currentVocab.word,
-                    audioUrl: currentVocab.audioUrl,
-                    rate: 0.7,
-                    accent: 'en-GB',
-                  })
-                }
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:bg-indigo-50 hover:text-indigo-700"
-              >
-                <Volume2 className="h-4 w-4" />
-                <span>Nghe chậm 0.7×</span>
-              </button>
-            </div>
+            <AudioPlayerControls
+              word={currentVocab.word}
+              audioUrl={currentVocab.audioUrl}
+              align="center"
+              className="mt-5"
+            />
           </div>
 
           {/* Back of Card */}

@@ -264,3 +264,490 @@ body {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* Metallic Tier Rank Badges (Top 1-3 Gold/Silver/Bronze + Shimmer, Rank 4+ Neutral) */
+.lt-rank-badge {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 12px 4px 5px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  user-select: none;
+  vertical-align: middle;
+}
+
+.lt-rank-badge.lt-rank-sm {
+  min-height: 28px;
+  gap: 6px;
+  padding: 3px 10px 3px 4px;
+  font-size: 11.5px;
+}
+
+.lt-rank-icon {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+}
+
+.lt-rank-badge.lt-rank-sm .lt-rank-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.lt-rank-label {
+  position: relative;
+  z-index: 1;
+  white-space: nowrap;
+}
+
+.lt-rank-badge.lt-rank-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent);
+  transform: skewX(-20deg);
+  animation: lt-rank-shimmer 3.5s infinite;
+  pointer-events: none;
+}
+
+@keyframes lt-rank-shimmer {
+  0%,
+  65% {
+    left: -100%;
+  }
+  100% {
+    left: 160%;
+  }
+}
+
+.lt-rank-gold {
+  background: linear-gradient(180deg, #fffdf5 0%, #fdf2d0 100%);
+  border: 1px solid rgba(202, 145, 24, 0.34);
+  box-shadow: 0 2px 6px -2px rgba(168, 114, 12, 0.18), inset 0 1px 0 #ffffff;
+  color: #855408;
+}
+
+.lt-rank-gold .lt-rank-icon {
+  background: linear-gradient(135deg, #f4c44e, #c98b14);
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(201, 139, 20, 0.32);
+}
+
+.lt-rank-silver {
+  background: linear-gradient(180deg, #fcfdff 0%, #edf1f6 100%);
+  border: 1px solid rgba(114, 128, 148, 0.32);
+  box-shadow: 0 2px 6px -2px rgba(78, 92, 112, 0.16), inset 0 1px 0 #ffffff;
+  color: #3e4a5c;
+}
+
+.lt-rank-silver .lt-rank-icon {
+  background: linear-gradient(135deg, #b8c4d4, #7e8ca0);
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(126, 140, 160, 0.32);
+}
+
+.lt-rank-bronze {
+  background: linear-gradient(180deg, #fffbf5 0%, #f9efe2 100%);
+  border: 1px solid rgba(180, 110, 52, 0.28);
+  box-shadow: 0 2px 6px -2px rgba(138, 75, 24, 0.15), inset 0 1px 0 #ffffff;
+  color: #7c3f11;
+}
+
+.lt-rank-bronze .lt-rank-icon {
+  background: linear-gradient(135deg, #e39a5c, #b56224);
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(181, 98, 36, 0.3);
+}
+
+.lt-rank-default {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  color: var(--text-body);
+  font-weight: 600;
+}
+
+.lt-rank-default .lt-rank-icon {
+  background: var(--bg-surface-subtle);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lt-rank-badge.lt-rank-shimmer::after {
+    animation: none !important;
+    display: none;
+  }
+}
+
+/* ============================================================================
+   Dark Theme (:root[data-theme="dark"]) — Cohesive, high-contrast Slate + Indigo
+   ============================================================================ */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg-app: #0b1120;
+  --bg-surface: #111827;
+  --bg-surface-subtle: #182234;
+  --bg-surface-hover: #1e293b;
+  --border-color: #243044;
+  --border-light: #1e293b;
+  --border-focus: #475569;
+
+  --text-main: #f1f5f9;
+  --text-title: #e2e8f0;
+  --text-body: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-subtle: #64748b;
+
+  --brand-soft-bg: rgba(99, 102, 241, 0.16);
+  --brand-soft-fg: #a5b4fc;
+  --brand-soft-border: rgba(99, 102, 241, 0.32);
+
+  --soft-green-bg: rgba(16, 185, 129, 0.14);
+  --soft-green-fg: #6ee7b7;
+  --soft-green-border: rgba(16, 185, 129, 0.3);
+
+  --soft-amber-bg: rgba(245, 158, 11, 0.14);
+  --soft-amber-fg: #fcd34d;
+  --soft-amber-border: rgba(245, 158, 11, 0.3);
+
+  --soft-rose-bg: rgba(244, 63, 94, 0.16);
+  --soft-rose-fg: #fda4af;
+  --soft-rose-border: rgba(244, 63, 94, 0.32);
+
+  --soft-blue-bg: rgba(56, 189, 248, 0.14);
+  --soft-blue-fg: #7dd3fc;
+  --soft-blue-border: rgba(56, 189, 248, 0.3);
+
+  --btn-primary-bg: #4f46e5;
+  --btn-primary-hover: #6366f1;
+}
+
+:root[data-theme='dark'] body,
+:root[data-theme='dark'] .bg-\[\#f8fafc\] {
+  background-color: var(--bg-app) !important;
+  color: var(--text-main) !important;
+}
+
+/* Surfaces */
+:root[data-theme='dark'] .bg-white,
+:root[data-theme='dark'] .bg-white\/95,
+:root[data-theme='dark'] .bg-white\/90,
+:root[data-theme='dark'] .bg-white\/80 {
+  background-color: var(--bg-surface) !important;
+}
+
+:root[data-theme='dark'] .bg-slate-50,
+:root[data-theme='dark'] .bg-slate-50\/90,
+:root[data-theme='dark'] .bg-slate-50\/80,
+:root[data-theme='dark'] .bg-slate-50\/70,
+:root[data-theme='dark'] .bg-slate-50\/60,
+:root[data-theme='dark'] .bg-slate-50\/50,
+:root[data-theme='dark'] .bg-slate-100 {
+  background-color: var(--bg-surface-subtle) !important;
+}
+
+:root[data-theme='dark'] .bg-slate-200,
+:root[data-theme='dark'] .bg-slate-200\/80 {
+  background-color: #243044 !important;
+}
+
+:root[data-theme='dark'] .hover\:bg-slate-50:hover,
+:root[data-theme='dark'] .hover\:bg-slate-50\/70:hover,
+:root[data-theme='dark'] .hover\:bg-slate-100:hover {
+  background-color: var(--bg-surface-hover) !important;
+}
+
+/* Primary dark buttons become vibrant Indigo in Dark Mode for clear contrast */
+:root[data-theme='dark'] .bg-slate-900 {
+  background-color: var(--btn-primary-bg) !important;
+}
+
+:root[data-theme='dark'] .hover\:bg-slate-800:hover {
+  background-color: var(--btn-primary-hover) !important;
+}
+
+:root[data-theme='dark'] .bg-slate-800 {
+  background-color: #1e293b !important;
+}
+
+/* Borders & Dividers */
+:root[data-theme='dark'] .border-slate-200,
+:root[data-theme='dark'] .border-slate-200\/80,
+:root[data-theme='dark'] .border-slate-300 {
+  border-color: var(--border-color) !important;
+}
+
+:root[data-theme='dark'] .border-slate-100,
+:root[data-theme='dark'] .divide-slate-100 > :not(:last-child) {
+  border-color: var(--border-light) !important;
+}
+
+:root[data-theme='dark'] .ring-slate-200\/90 {
+  --tw-ring-color: var(--border-color) !important;
+}
+
+:root[data-theme='dark'] .border-white {
+  border-color: var(--bg-surface) !important;
+}
+
+/* Typography */
+:root[data-theme='dark'] .text-slate-900,
+:root[data-theme='dark'] .text-\[\#0f172a\] {
+  color: var(--text-main) !important;
+}
+
+:root[data-theme='dark'] .text-slate-800 {
+  color: var(--text-title) !important;
+}
+
+:root[data-theme='dark'] .text-slate-700 {
+  color: var(--text-body) !important;
+}
+
+:root[data-theme='dark'] .text-slate-600,
+:root[data-theme='dark'] .text-slate-500 {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme='dark'] .text-slate-400 {
+  color: #7e8fa6 !important;
+}
+
+:root[data-theme='dark'] .hover\:text-slate-900:hover,
+:root[data-theme='dark'] .hover\:text-slate-800:hover {
+  color: var(--text-main) !important;
+}
+
+/* Soft semantic tinted surfaces & text */
+:root[data-theme='dark'] .bg-indigo-50,
+:root[data-theme='dark'] .bg-indigo-50\/80,
+:root[data-theme='dark'] .bg-indigo-50\/70,
+:root[data-theme='dark'] .bg-indigo-50\/60,
+:root[data-theme='dark'] .bg-indigo-50\/50,
+:root[data-theme='dark'] .bg-indigo-50\/40,
+:root[data-theme='dark'] .bg-indigo-100 {
+  background-color: var(--brand-soft-bg) !important;
+}
+
+:root[data-theme='dark'] .border-indigo-100,
+:root[data-theme='dark'] .border-indigo-200,
+:root[data-theme='dark'] .border-indigo-300 {
+  border-color: var(--brand-soft-border) !important;
+}
+
+:root[data-theme='dark'] .text-indigo-700,
+:root[data-theme='dark'] .text-indigo-800,
+:root[data-theme='dark'] .text-indigo-900 {
+  color: var(--brand-soft-fg) !important;
+}
+
+:root[data-theme='dark'] .bg-amber-50,
+:root[data-theme='dark'] .bg-amber-50\/70,
+:root[data-theme='dark'] .bg-amber-50\/50,
+:root[data-theme='dark'] .bg-amber-50\/40,
+:root[data-theme='dark'] .bg-amber-100,
+:root[data-theme='dark'] .from-amber-50\/80 {
+  background-color: var(--soft-amber-bg) !important;
+  --tw-gradient-from: rgba(245, 158, 11, 0.16) !important;
+  --tw-gradient-to: var(--bg-surface) !important;
+}
+
+:root[data-theme='dark'] .border-amber-200,
+:root[data-theme='dark'] .border-amber-200\/80,
+:root[data-theme='dark'] .border-amber-400 {
+  border-color: var(--soft-amber-border) !important;
+}
+
+:root[data-theme='dark'] .text-amber-700,
+:root[data-theme='dark'] .text-amber-800,
+:root[data-theme='dark'] .text-amber-900 {
+  color: var(--soft-amber-fg) !important;
+}
+
+:root[data-theme='dark'] .bg-emerald-50,
+:root[data-theme='dark'] .bg-emerald-50\/70,
+:root[data-theme='dark'] .bg-emerald-50\/60,
+:root[data-theme='dark'] .bg-emerald-50\/50,
+:root[data-theme='dark'] .bg-emerald-100 {
+  background-color: var(--soft-green-bg) !important;
+}
+
+:root[data-theme='dark'] .border-emerald-200,
+:root[data-theme='dark'] .border-emerald-300 {
+  border-color: var(--soft-green-border) !important;
+}
+
+:root[data-theme='dark'] .text-emerald-700,
+:root[data-theme='dark'] .text-emerald-800,
+:root[data-theme='dark'] .text-emerald-900 {
+  color: var(--soft-green-fg) !important;
+}
+
+:root[data-theme='dark'] .bg-rose-50,
+:root[data-theme='dark'] .bg-rose-50\/70,
+:root[data-theme='dark'] .bg-rose-100 {
+  background-color: var(--soft-rose-bg) !important;
+}
+
+:root[data-theme='dark'] .border-rose-200 {
+  border-color: var(--soft-rose-border) !important;
+}
+
+:root[data-theme='dark'] .text-rose-600,
+:root[data-theme='dark'] .text-rose-700,
+:root[data-theme='dark'] .text-rose-800,
+:root[data-theme='dark'] .text-rose-900 {
+  color: var(--soft-rose-fg) !important;
+}
+
+:root[data-theme='dark'] .bg-sky-50,
+:root[data-theme='dark'] .bg-sky-50\/70,
+:root[data-theme='dark'] .bg-sky-50\/50,
+:root[data-theme='dark'] .bg-sky-100 {
+  background-color: var(--soft-blue-bg) !important;
+}
+
+:root[data-theme='dark'] .border-sky-200 {
+  border-color: var(--soft-blue-border) !important;
+}
+
+:root[data-theme='dark'] .text-sky-700,
+:root[data-theme='dark'] .text-sky-800,
+:root[data-theme='dark'] .text-sky-900 {
+  color: var(--soft-blue-fg) !important;
+}
+
+/* Rank circle badges & gradient cards in Dark Mode */
+:root[data-theme='dark'] .from-amber-50 {
+  --tw-gradient-from: rgba(245, 158, 11, 0.24) !important;
+  --tw-gradient-to: rgba(180, 83, 9, 0.14) !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme='dark'] .from-slate-50 {
+  --tw-gradient-from: rgba(148, 163, 184, 0.22) !important;
+  --tw-gradient-to: rgba(71, 85, 105, 0.16) !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme='dark'] .from-orange-50 {
+  --tw-gradient-from: rgba(249, 115, 22, 0.24) !important;
+  --tw-gradient-to: rgba(194, 65, 12, 0.14) !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme='dark'] .text-orange-800 {
+  color: #fdba74 !important;
+}
+
+:root[data-theme='dark'] .border-orange-300 {
+  border-color: rgba(251, 146, 60, 0.38) !important;
+}
+
+:root[data-theme='dark'] .from-emerald-50 {
+  --tw-gradient-from: rgba(16, 185, 129, 0.18) !important;
+  --tw-gradient-to: rgba(6, 95, 70, 0.12) !important;
+}
+
+:root[data-theme='dark'] .from-indigo-50 {
+  --tw-gradient-from: rgba(99, 102, 241, 0.18) !important;
+  --tw-gradient-to: rgba(67, 56, 202, 0.12) !important;
+}
+
+/* Highlighted current-user leaderboard row gradient */
+:root[data-theme='dark'] .from-indigo-50\/90 {
+  --tw-gradient-from: rgba(99, 102, 241, 0.2) !important;
+  --tw-gradient-via: rgba(99, 102, 241, 0.1) !important;
+  --tw-gradient-to: var(--bg-surface) !important;
+}
+
+/* AccountMenu in Dark Mode */
+:root[data-theme='dark'] .acct-menu {
+  --acct-accent: #818cf8;
+  --acct-mint: #34d399;
+  --acct-danger: #fb7185;
+  --acct-line: rgba(255, 255, 255, 0.1);
+  --acct-shadow: rgba(0, 0, 0, 0.45);
+  --acct-shadow-strong: rgba(0, 0, 0, 0.72);
+}
+
+:root[data-theme='dark'] .acct-menu-av[aria-expanded='true'] {
+  box-shadow: 0 0 0 2.5px var(--bg-surface), 0 0 0 4.5px var(--acct-accent);
+}
+
+:root[data-theme='dark'] .acct-menu-dot {
+  box-shadow: 0 0 0 2.5px var(--bg-surface);
+}
+
+/* RankBadge in Dark Mode */
+:root[data-theme='dark'] .lt-rank-gold {
+  background: linear-gradient(180deg, rgba(244, 196, 78, 0.2) 0%, rgba(201, 139, 20, 0.12) 100%);
+  border-color: rgba(244, 196, 78, 0.42);
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  color: #fde68a;
+}
+
+:root[data-theme='dark'] .lt-rank-silver {
+  background: linear-gradient(180deg, rgba(184, 196, 212, 0.2) 0%, rgba(126, 140, 160, 0.12) 100%);
+  border-color: rgba(184, 196, 212, 0.36);
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+}
+
+:root[data-theme='dark'] .lt-rank-bronze {
+  background: linear-gradient(180deg, rgba(227, 154, 92, 0.22) 0%, rgba(181, 98, 36, 0.12) 100%);
+  border-color: rgba(227, 154, 92, 0.38);
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  color: #fed7aa;
+}
+
+:root[data-theme='dark'] .lt-rank-badge.lt-rank-shimmer::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.32), transparent);
+}
+
+:root[data-theme='dark'] .lt-rank-default {
+  background: var(--bg-surface-subtle);
+  border-color: var(--border-color);
+  color: var(--text-body);
+}
+
+:root[data-theme='dark'] .lt-rank-default .lt-rank-icon {
+  background: #273449;
+  color: var(--text-muted);
+}
+
+/* CustomSelect smooth popover animation */
+.lt-select-panel {
+  animation: lt-select-in 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform-origin: top center;
+}
+
+@keyframes lt-select-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+:root[data-theme='dark'] .lt-select-panel {
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.65);
+}

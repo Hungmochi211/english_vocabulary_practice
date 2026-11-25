@@ -85,7 +85,7 @@ describe('T050 - US6: Weekly Leaderboard & Saved Words Custom Practice', () => {
 
     // Navigate to Review Center via Sidebar
     await user.click(screen.getByRole('link', { name: /^Ôn tập$/i }));
-    expect(await screen.findByRole('heading', { name: /Trung tâm Ôn tập SM-2/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Trung tâm Ôn tập/i })).toBeInTheDocument();
 
     // Start custom practice from Saved Words (3 words)
     const customBtn = await screen.findByRole('button', { name: /Ôn Sổ từ đã lưu \(3\)/i });
@@ -93,7 +93,7 @@ describe('T050 - US6: Weekly Leaderboard & Saved Words Custom Practice', () => {
 
     // Explicit non-SM2/Streak notice visible
     expect(
-      await screen.findByText(/không thay đổi lịch SM-2 hay Streak chính thức trên máy chủ/i),
+      await screen.findByText(/không ảnh hưởng lịch ôn tập hay chuỗi ngày học chính thức/i),
     ).toBeInTheDocument();
 
     // Complete 3 custom questions locally (savedWords stores newest first: go, phone, peaceful)

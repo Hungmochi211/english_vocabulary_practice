@@ -7,7 +7,6 @@ import {
   Copy,
   Search,
   Sparkles,
-  Volume2,
 } from 'lucide-react';
 import { vocabularyApi } from '@/services/api/vocabulary.api';
 import {
@@ -19,8 +18,9 @@ import {
   highlightWordInExample,
   matchesVietnameseOrEnglish,
 } from '@/utils/fuzzySearch';
-import { useVocabularyAudio } from '@/hooks/useVocabularyAudio';
+import { AudioPlayerControls } from '@/components/common/AudioPlayerControls';
 import { EmptyState, ErrorRetryBox, Skeleton, useToast } from '@/components/common/CommonUi';
+import { CustomSelect } from '@/components/common/CustomSelect';
 import type { CefrLevel, SavedWordRecord, VocabularyItem } from '@/types/models';
 
 const CEFR_FILTERS: Array<{ value: CefrLevel | ''; label: string }> = [
@@ -44,7 +44,6 @@ export function DictionaryPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialQuery = searchParams.get('q') ?? '';
   const { showToast } = useToast();
-  const { play } = useVocabularyAudio();
 
   const [queryText, setQueryText] = useState(initialQuery);
   const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
@@ -232,13 +231,22 @@ export function DictionaryPage() {
             Từ điển Oxford 3000
           </h1>
           <p className="mt-1 text-sm text-slate-600">
-            Tra cứu nhanh tiếng Anh & tiếng Việt không dấu, lọc đa tiêu chí CEFR / Loại từ / Chủ đề và lưu vào Sổ từ.
+            Tra cứu nhanh tiếng Anh & tiếng Việt không dấu, lọc theo Trình độ / Loại từ / Chủ đề và lưu vào Sổ từ.
           </p>
         </div>
 
         <button
           type="button"
-          onClick={() => setOnlySaved((prev) => !prev)}
+          onClick={() => {
+            const next = !onlySaved;
+            setOnlySaved(next);
+            if (next) {
+              handleQueryChange('');
+              setSelectedLevel('');
+              setSelectedPos('');
+              setSelectedTopicId(null);
+            }
+          }}
           aria-pressed={onlySaved}
           className={`inline-flex shrink-0 items-center gap-2 self-start rounded-xl border px-4 py-2 text-xs font-bold transition sm:self-auto ${
             onlySaved
@@ -266,7 +274,7 @@ export function DictionaryPage() {
         </div>
 
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Lọc CEFR">
+          <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Lọc theo trình độ">
             {CEFR_FILTERS.map((opt) => {
               const active = selectedLevel === opt.value;
               return (
@@ -288,34 +296,27 @@ export function DictionaryPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <select
-              aria-label="Lọc theo loại từ"
+            <CustomSelect
+              ariaLabel="Lọc theo loại từ"
               value={selectedPos}
-              onChange={(e) => setSelectedPos(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:border-indigo-400"
-            >
-              {POS_OPTIONS.map((opt) => (
-                <option key={opt.label} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedPos(val)}
+              options={POS_OPTIONS}
+              align="right"
+            />
 
-            <select
-              aria-label="Lọc theo chủ đề từ điển"
-              value={selectedTopicId ?? ''}
-              onChange={(e) =>
-                setSelectedTopicId(e.target.value ? Number(e.target.value) : null)
-              }
-              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:border-indigo-400"
-            >
-              <option value="">Tất cả chủ đề</option>
-              {(topicsQuery.data ?? []).map((topic) => (
-                <option key={topic.id} value={topic.id}>
-                  {topic.name}
-                </option>
-              ))}
-            </select>
+            <CustomSelect
+              ariaLabel="Lọc theo chủ đề từ điển"
+              value={selectedTopicId ? String(selectedTopicId) : ''}
+              onChange={(val) => setSelectedTopicId(val ? Number(val) : null)}
+              options={[
+                { value: '', label: 'Tất cả chủ đề' },
+                ...(topicsQuery.data ?? []).map((topic) => ({
+                  value: String(topic.id),
+                  label: topic.name,
+                })),
+              ]}
+              align="right"
+            />
           </div>
         </div>
       </section>
@@ -366,7 +367,7 @@ export function DictionaryPage() {
 
                 <EmptyState
                   title="Không tìm thấy từ vựng phù hợp"
-                  description="Thử từ khóa khác, tìm tiếng Việt không dấu hoặc đặt lại bộ lọc CEFR/Loại từ."
+                  description="Thử từ khóa khác, tìm tiếng Việt không dấu hoặc đặt lại bộ lọc Trình độ/Loại từ."
                 />
               </div>
             ) : (
@@ -375,17 +376,19 @@ export function DictionaryPage() {
                   const isSelected = selectedVocab?.id === item.id;
                   const isBookmarked = savedIdSet.has(item.id);
                   return (
-                    <button
+                    <div
                       key={item.id}
-                      type="button"
-                      onClick={() => setSelectedWordId(item.id)}
-                      className={`flex w-full items-start justify-between gap-3 rounded-xl border p-3.5 text-left transition ${
+                      className={`flex w-full items-center justify-between gap-2 rounded-xl border pr-2.5 transition ${
                         isSelected
                           ? 'border-indigo-400 bg-indigo-50/70'
                           : 'border-slate-200 bg-white hover:bg-slate-50'
                       }`}
                     >
-                      <div className="min-w-0 flex-1">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedWordId(item.id)}
+                        className="min-w-0 flex-1 p-3.5 text-left"
+                      >
                         <div className="flex flex-wrap items-center gap-1.5">
                           <strong className="font-heading text-sm font-extrabold text-slate-900">
                             {item.word}
@@ -400,14 +403,27 @@ export function DictionaryPage() {
                         <p className="mt-1 truncate text-xs text-slate-600">
                           {item.vietnameseMeaning}
                         </p>
-                      </div>
-                      {isBookmarked && (
-                        <BookmarkCheck
-                          aria-label="Đã lưu"
-                          className="h-4 w-4 shrink-0 text-amber-600"
-                        />
-                      )}
-                    </button>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleToggleBookmark(item)}
+                        aria-label={isBookmarked ? 'Bỏ đánh dấu từ này' : 'Đánh dấu lưu nhanh'}
+                        aria-pressed={isBookmarked}
+                        title={isBookmarked ? 'Bỏ lưu khỏi Sổ từ' : 'Lưu vào Sổ từ'}
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition ${
+                          isBookmarked
+                            ? 'border-amber-200 bg-amber-50 text-amber-500 hover:bg-amber-100'
+                            : 'border-transparent text-slate-400 hover:border-amber-200 hover:bg-amber-50 hover:text-amber-600'
+                        }`}
+                      >
+                        {isBookmarked ? (
+                          <BookmarkCheck className="h-4 w-4 fill-amber-400/30 text-amber-500" />
+                        ) : (
+                          <Bookmark className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                   );
                 })}
 
@@ -496,38 +512,10 @@ export function DictionaryPage() {
                 </div>
 
                 {/* Audio Controls */}
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void play({
-                        word: selectedVocab.word,
-                        audioUrl: selectedVocab.audioUrl,
-                        rate: 1,
-                        accent: 'en-US',
-                      })
-                    }
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-50 px-3.5 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-100"
-                  >
-                    <Volume2 className="h-4 w-4" />
-                    <span>Phát âm US 1.0×</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void play({
-                        word: selectedVocab.word,
-                        audioUrl: selectedVocab.audioUrl,
-                        rate: 0.7,
-                        accent: 'en-GB',
-                      })
-                    }
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100"
-                  >
-                    <Volume2 className="h-4 w-4" />
-                    <span>Phát âm UK chậm 0.7×</span>
-                  </button>
-                </div>
+                <AudioPlayerControls
+                  word={selectedVocab.word}
+                  audioUrl={selectedVocab.audioUrl}
+                />
 
                 {/* Meaning & Highlighted Example */}
                 <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-5">

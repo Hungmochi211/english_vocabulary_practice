@@ -1,5 +1,4 @@
-import { Volume2 } from 'lucide-react';
-import { useVocabularyAudio } from '@/hooks/useVocabularyAudio';
+import { AudioPlayerControls } from '@/components/common/AudioPlayerControls';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import type { QuizQuestion } from '@/types/models';
 
@@ -16,7 +15,6 @@ export function QuizQuestionStage({
   onSelect,
   onEnterNext,
 }: QuizQuestionStageProps) {
-  const { play } = useVocabularyAudio();
   const options = question.prompt.options ?? [];
 
   useKeyboardShortcuts({
@@ -51,38 +49,12 @@ export function QuizQuestionStage({
             {question.prompt.phonetic && (
               <p className="mt-1 font-mono text-sm text-slate-500">{question.prompt.phonetic}</p>
             )}
-            <div className="mt-3 flex justify-center gap-2">
-              <button
-                type="button"
-                onClick={() =>
-                  void play({
-                    word: question.prompt.word ?? '',
-                    audioUrl: question.prompt.audioUrl,
-                    rate: 1,
-                    accent: 'en-US',
-                  })
-                }
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700"
-              >
-                <Volume2 className="h-3.5 w-3.5" />
-                <span>Nghe 1.0×</span>
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  void play({
-                    word: question.prompt.word ?? '',
-                    audioUrl: question.prompt.audioUrl,
-                    rate: 0.7,
-                    accent: 'en-GB',
-                  })
-                }
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700"
-              >
-                <Volume2 className="h-3.5 w-3.5" />
-                <span>Chậm 0.7×</span>
-              </button>
-            </div>
+            <AudioPlayerControls
+              word={question.prompt.word ?? ''}
+              audioUrl={question.prompt.audioUrl}
+              align="center"
+              className="mt-3"
+            />
           </>
         ) : (
           <p className="font-heading text-xl font-extrabold text-slate-900">

@@ -374,7 +374,7 @@ describe('Frontend/Web Audit Regression Suite (001/002 Contract & Security Fixes
 
     // Select Quiz mode and start SM-2 session -> must render 4-choice Quiz stage, NOT Typing
     await user.click(screen.getByRole('button', { name: /Trắc nghiệm/i }));
-    await user.click(screen.getByRole('button', { name: /Bắt đầu phiên ôn SM-2/i }));
+    await user.click(screen.getByRole('button', { name: /Bắt đầu ôn tập/i }));
     expect(await screen.findByText(/Trắc nghiệm 4 đáp án/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /peaceful/i })).toBeInTheDocument();
   });
@@ -399,5 +399,39 @@ describe('Frontend/Web Audit Regression Suite (001/002 Contract & Security Fixes
     await user.click(avatarBtn);
     await user.click(screen.getByRole('menuitem', { name: /Đăng xuất/i }));
     expect(await screen.findByRole('button', { name: /Đăng xuất ngay/i })).toBeInTheDocument();
+  });
+
+  it('navigates from Login to ForgotPasswordPage and displays recovery guidance modal', async () => {
+    const user = userEvent.setup();
+    renderApp('/login', null);
+
+    await user.click(await screen.findByRole('link', { name: /Quên mật khẩu\?/i }));
+    expect(await screen.findByRole('heading', { name: /Quên mật khẩu/i })).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText(/Email tài khoản đã đăng ký/i), 'hocvien@vnua.edu.vn');
+    await user.click(screen.getByRole('button', { name: /Gửi yêu cầu khôi phục/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /Hướng dẫn khôi phục mật khẩu/i });
+    expect(dialog).toHaveTextContent('hocvien@vnua.edu.vn');
+    expect(dialog).toHaveTextContent(/support@lexitag\.vn/i);
+
+    await user.click(screen.getByRole('button', { name: /Đã hiểu/i }));
+    await user.click(screen.getByRole('link', { name: /Quay lại đăng nhập/i }));
+    expect(await screen.findByRole('button', { name: /^Đăng nhập$/i })).toBeInTheDocument();
+  });
+
+  it('toggles between Light and Dark theme from Topbar and persists in localStorage', async () => {
+    const user = userEvent.setup();
+    renderApp('/', mockLearnerUser);
+
+    const toggleBtn = await screen.findByRole('button', { name: /Chuyển sang giao diện tối/i });
+    await user.click(toggleBtn);
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(window.localStorage.getItem('lexitag:v1:theme')).toBe('dark');
+
+    const backToLightBtn = await screen.findByRole('button', { name: /Chuyển sang giao diện sáng/i });
+    await user.click(backToLightBtn);
+    expect(document.documentElement.dataset.theme).toBe('light');
+    expect(window.localStorage.getItem('lexitag:v1:theme')).toBe('light');
   });
 });

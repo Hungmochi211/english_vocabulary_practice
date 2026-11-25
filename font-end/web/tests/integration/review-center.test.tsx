@@ -38,14 +38,14 @@ describe('T030 - US3: Review Center, 5 Leitner Boxes, 4 Modes & Grading Parity',
     const user = userEvent.setup();
     renderReviewApp('/review');
 
-    expect(await screen.findByRole('heading', { name: /Trung tâm Ôn tập SM-2/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Trung tâm Ôn tập/i })).toBeInTheDocument();
     expect(await screen.findByText(/^3 từ đến hạn$/i)).toBeInTheDocument();
     expect(screen.getByText(/^Hộp 1$/i)).toBeInTheDocument();
     expect(screen.getByText(/^Hộp 5$/i)).toBeInTheDocument();
 
     // Select Typing mode and start official SM-2 session
     await user.click(screen.getByRole('button', { name: /Gõ từ/i }));
-    await user.click(screen.getByRole('button', { name: /Bắt đầu phiên ôn SM-2/i }));
+    await user.click(screen.getByRole('button', { name: /Bắt đầu ôn tập/i }));
 
     // Q1: peaceful -> paeceful (near_match)
     const input1 = await screen.findByLabelText(/Nhập từ tiếng Anh/i);
@@ -127,7 +127,7 @@ describe('T030 - US3: Review Center, 5 Leitner Boxes, 4 Modes & Grading Parity',
     renderReviewApp('/review');
 
     await user.click(await screen.findByRole('button', { name: /Gõ từ/i }));
-    await user.click(screen.getByRole('button', { name: /Bắt đầu phiên ôn SM-2/i }));
+    await user.click(screen.getByRole('button', { name: /Bắt đầu ôn tập/i }));
 
     for (let i = 0; i < 3; i += 1) {
       const input = await screen.findByLabelText(/Nhập từ tiếng Anh/i);
@@ -142,7 +142,7 @@ describe('T030 - US3: Review Center, 5 Leitner Boxes, 4 Modes & Grading Parity',
     setMockDueEmpty();
     renderReviewApp('/review');
 
-    expect(await screen.findByText(/Hôm nay bạn không còn từ nào đến hạn/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Hôm nay bạn không còn từ nào cần ôn tập/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Học bài mới/i })).toHaveAttribute('href', '/courses');
     expect(screen.getByRole('link', { name: /Tra từ Oxford 3000/i })).toHaveAttribute('href', '/dictionary');
   });

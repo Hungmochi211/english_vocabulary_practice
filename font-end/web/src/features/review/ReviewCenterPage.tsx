@@ -130,7 +130,7 @@ const MODE_CARDS: Array<{
   desc: string;
   icon: typeof Layers;
 }> = [
-  { id: 'srs', label: 'Thẻ SM-2', desc: 'Lật thẻ & tự đánh giá 4 mức nhớ', icon: Layers },
+  { id: 'srs', label: 'Thẻ ghi nhớ', desc: 'Lật thẻ & tự đánh giá 4 mức nhớ', icon: Layers },
   { id: 'quiz', label: 'Trắc nghiệm', desc: 'Chọn nhanh 1 trong 4 đáp án (phím 1–4)', icon: ListChecks },
   { id: 'typing', label: 'Gõ từ', desc: 'Gõ chính xác từ tiếng Anh theo nghĩa', icon: Keyboard },
   { id: 'dictation', label: 'Nghe chép', desc: 'Nghe US/UK 1.0× / 0.7× và chép lại', icon: Headphones },
@@ -271,7 +271,7 @@ export function ReviewCenterPage() {
     try {
       const attempt: QuizAttemptStart = await reviewApi.startSm2Session(20);
       if (attempt.questions.length === 0) {
-        showToast('Không có từ nào đến hạn ôn tập SM-2.', 'info');
+        showToast('Hôm nay chưa có từ nào cần ôn tập.', 'info');
         return;
       }
       const targetWords: Record<number, string> = {};
@@ -281,14 +281,14 @@ export function ReviewCenterPage() {
       initSessionState({
         origin: 'server_official',
         attemptId: attempt.attemptId,
-        title: 'Phiên ôn tập SM-2 chính thức',
+        title: 'Phiên ôn tập hôm nay',
         uiMode: selectedMode,
         questions: attempt.questions,
         targetWordsByVocabId: targetWords,
         dueLookup,
       });
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'Không thể bắt đầu phiên ôn SM-2.';
+      const msg = err instanceof ApiError ? err.message : 'Không thể bắt đầu phiên ôn tập.';
       showToast(msg, 'error');
     } finally {
       setStarting(false);
@@ -304,7 +304,7 @@ export function ReviewCenterPage() {
       initSessionState({
         origin: 'server_official',
         attemptId: attempt.attemptId,
-        title: 'Bài kiểm tra tổng hợp (Mixed Quiz)',
+        title: 'Bài kiểm tra tổng hợp',
         uiMode: 'mixed',
         questions: attempt.questions,
         targetWordsByVocabId: {},
@@ -495,7 +495,7 @@ export function ReviewCenterPage() {
         })),
       });
       notificationsAdapter.push({
-        title: 'Hoàn tất phiên ôn tập SM-2',
+        title: 'Hoàn tất phiên ôn tập',
         body: `Bạn vừa đạt ${result.scorePercent}% và nhận +${result.xpEarned} XP.`,
         icon: 'trophy',
         tone: result.passed ? 'green' : 'amber',
@@ -558,7 +558,7 @@ export function ReviewCenterPage() {
 
           {summary.origin === 'client_custom_practice' && (
             <p className="mx-auto mt-3 max-w-lg rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-xs font-semibold text-amber-800">
-              Phiên luyện tập tự chọn — không thay đổi lịch SM-2 hay Streak chính thức trên máy chủ.
+              Phiên luyện tập tự chọn — không ảnh hưởng lịch ôn tập hay chuỗi ngày học chính thức.
             </p>
           )}
 
@@ -653,7 +653,7 @@ export function ReviewCenterPage() {
             <h1 className="font-heading text-lg font-extrabold text-slate-900">{session.title}</h1>
             <p className="text-xs font-semibold text-slate-500">
               Câu {currentIndex + 1} / {session.questions.length}
-              {session.origin === 'client_custom_practice' && ' • Phiên tự chọn (không đổi SM-2)'}
+              {session.origin === 'client_custom_practice' && ' • Phiên tự chọn'}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -679,7 +679,7 @@ export function ReviewCenterPage() {
             role="note"
             className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs font-semibold text-amber-800"
           >
-            Phiên luyện tập tự chọn — không thay đổi lịch SM-2 hay Streak chính thức trên máy chủ.
+            Phiên luyện tập tự chọn — không ảnh hưởng lịch ôn tập hay chuỗi ngày học chính thức.
           </div>
         )}
 
@@ -809,9 +809,9 @@ export function ReviewCenterPage() {
     <div className="space-y-6">
       <header className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xs sm:flex-row sm:items-center">
         <div>
-          <h1 className="font-heading text-2xl font-extrabold text-slate-900">Trung tâm Ôn tập SM-2</h1>
+          <h1 className="font-heading text-2xl font-extrabold text-slate-900">Trung tâm Ôn tập</h1>
           <p className="mt-1 text-sm text-slate-600">
-            Củng cố trí nhớ dài hạn với 5 Hộp Leitner, 4 chế độ luyện tập và chấm điểm thông minh 4 cấp độ.
+            Củng cố trí nhớ dài hạn với 5 Hộp ghi nhớ, 4 chế độ luyện tập và chấm điểm thông minh.
           </p>
         </div>
 
@@ -843,7 +843,7 @@ export function ReviewCenterPage() {
 
       {dueQuery.isError ? (
         <ErrorRetryBox
-          message="Không thể tải danh sách từ đến hạn SM-2. Vui lòng thử lại."
+          message="Không thể tải danh sách từ cần ôn hôm nay. Vui lòng thử lại."
           onRetry={() => void dueQuery.refetch()}
         />
       ) : dueQuery.isLoading ? (
@@ -862,10 +862,10 @@ export function ReviewCenterPage() {
           {dueCount === 0 ? (
             <section className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-8 text-center">
               <h2 className="font-heading text-xl font-extrabold text-slate-900">
-                Hôm nay bạn không còn từ nào đến hạn ôn tập SM-2!
+                Hôm nay bạn không còn từ nào cần ôn tập!
               </h2>
               <p className="mx-auto mt-2 max-w-lg text-sm text-slate-600">
-                Tuyệt vời! Bạn đã hoàn thành sạch lịch nhắc hôm nay. Hãy học thêm bài mới trên Lộ trình CEFR hoặc tra cứu kho Oxford 3000.
+                Tuyệt vời! Bạn đã hoàn thành sạch lịch nhắc hôm nay. Hãy học thêm bài mới trên Lộ trình học hoặc tra cứu kho Oxford 3000.
               </p>
               <div className="mt-5 flex flex-wrap justify-center gap-3">
                 <Link
@@ -889,7 +889,7 @@ export function ReviewCenterPage() {
               <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                 <div>
                   <h2 className="font-heading text-lg font-extrabold text-slate-900">
-                    Chọn chế độ ôn tập SM-2
+                    Chọn chế độ ôn tập
                   </h2>
                   <p className="text-xs text-slate-500">
                     {selectedBox !== null
@@ -904,7 +904,7 @@ export function ReviewCenterPage() {
                   onClick={() => void handleStartOfficialSm2()}
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:opacity-60"
                 >
-                  <span>{starting ? 'Đang khởi tạo...' : 'Bắt đầu phiên ôn SM-2'}</span>
+                  <span>{starting ? 'Đang khởi tạo...' : 'Bắt đầu ôn tập'}</span>
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </div>

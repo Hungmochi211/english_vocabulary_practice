@@ -17,7 +17,7 @@ export function LogoutModal({
     <ConfirmModal
       open={open}
       title="Xác nhận đăng xuất?"
-      description={`Bạn có chắc muốn đăng xuất khỏi tài khoản ${userName}? Toàn bộ tiến độ học tập, chuỗi Streak và lịch ôn SM-2 vẫn được lưu an toàn.`}
+      description={`Bạn có chắc muốn đăng xuất khỏi tài khoản ${userName}? Toàn bộ tiến độ học tập, chuỗi Streak và lịch ôn tập vẫn được lưu an toàn.`}
       confirmLabel="Đăng xuất ngay"
       cancelLabel="Hủy"
       danger

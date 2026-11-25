@@ -71,7 +71,7 @@ function createWelcomeConversation(): AiConversation {
         id: `msg-welcome-${Date.now()}`,
         role: 'assistant',
         content:
-          'Xin chào! Mình là Trợ lý AI LexiTag (bản v1). Bạn có thể hỏi nghĩa, cách dùng, câu ví dụ hoặc phân biệt từ vựng trong kho Oxford 3000 nhé.',
+          'Xin chào! Mình là Trợ lý AI LexiTag. Bạn có thể hỏi nghĩa, cách dùng, câu ví dụ hoặc phân biệt từ vựng trong kho Oxford 3000 nhé.',
         detectedWords: [],
         createdAt: new Date().toISOString(),
       },
@@ -167,7 +167,7 @@ export const aiTutorAdapter = {
     if (matches.length > 0) {
       const lines = matches.map(
         (m) =>
-          `• ${m.word} (${m.partOfSpeech}, CEFR ${m.cefrLevel}) ${m.phonetic}\n  Nghĩa: ${m.vietnameseMeaning}\n  Ví dụ: "${m.exampleEn}" — ${m.exampleVi}`,
+          `• ${m.word} (${m.partOfSpeech}, trình độ ${m.cefrLevel}) ${m.phonetic}\n  Nghĩa: ${m.vietnameseMeaning}\n  Ví dụ: "${m.exampleEn}" — ${m.exampleVi}`,
       );
       replyText = `Dưới đây là giải thích chi tiết theo kho Oxford 3000:\n\n${lines.join('\n\n')}\n\nMẹo ghi nhớ: Hãy nghe phát âm và thử tự đặt thêm 1 câu gắn với thói quen hằng ngày của bạn!`;
     } else {

@@ -106,7 +106,7 @@ export function DashboardPage() {
           <div className="space-y-2">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-white px-3 py-1 text-xs font-bold text-indigo-700">
               <Sparkles className="h-3.5 w-3.5" />
-              <span>Mục tiêu CEFR {user?.targetLevel ?? 'B2'}</span>
+              <span>Mục tiêu trình độ {user?.targetLevel ?? 'B2'}</span>
             </span>
             <h1 className="font-heading text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
               Bảng điều khiển Trang chủ
@@ -127,7 +127,7 @@ export function DashboardPage() {
                 className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
               >
                 <GraduationCap className="h-4 w-4 text-indigo-600" />
-                <span>Ôn tập SM-2 ngay</span>
+                <span>Ôn tập ngay</span>
               </Link>
             </div>
           </div>
@@ -290,14 +290,14 @@ export function DashboardPage() {
           <div>
             <div className="flex items-center gap-2 text-amber-800">
               <Layers className="h-5 w-5" />
-              <h2 className="font-heading text-lg font-extrabold">Nhắc ôn SM-2 hôm nay</h2>
+              <h2 className="font-heading text-lg font-extrabold">Nhắc ôn tập hôm nay</h2>
             </div>
             <p className="mt-2 text-sm text-slate-600">
               Bạn đang có{' '}
               <strong className="font-heading text-base text-amber-800">
                 {overview?.dueReviewsCount ?? 0} từ đến hạn
               </strong>{' '}
-              cần củng cố để đẩy lên hộp Leitner cao hơn.
+              cần củng cố để ghi nhớ sâu hơn.
             </p>
 
             {overview?.leitnerDistribution && (

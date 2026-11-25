@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { RotateCcw, Volume2 } from 'lucide-react';
-import { useVocabularyAudio } from '@/hooks/useVocabularyAudio';
+import { RotateCcw } from 'lucide-react';
+import { AudioPlayerControls } from '@/components/common/AudioPlayerControls';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import type { DueReviewItem } from '@/types/models';
 
@@ -18,7 +18,6 @@ const RATINGS: Array<{ key: 1 | 2 | 3 | 4; label: string; hint: string; style: s
 
 export function SrsFlashcardStage({ item, onRate }: SrsFlashcardStageProps) {
   const [flipped, setFlipped] = useState(false);
-  const { play } = useVocabularyAudio();
 
   useKeyboardShortcuts({
     onSpace: () => setFlipped((prev) => !prev),
@@ -34,7 +33,7 @@ export function SrsFlashcardStage({ item, onRate }: SrsFlashcardStageProps) {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-slate-500">
         <span className="rounded-md bg-indigo-50 px-2.5 py-1 text-indigo-700">
-          Thẻ SM-2 • Hộp {item.leitnerBox}
+          Thẻ ghi nhớ • Hộp {item.leitnerBox}
         </span>
         <span>Phím Space để lật thẻ • Phím 1–4 để đánh giá</span>
       </div>
@@ -48,24 +47,12 @@ export function SrsFlashcardStage({ item, onRate }: SrsFlashcardStageProps) {
         </h3>
         <p className="mt-1 font-mono text-sm text-slate-500">{item.phonetic}</p>
 
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
-          <button
-            type="button"
-            onClick={() => void play({ word: item.word, audioUrl: item.audioUrl, rate: 1, accent: 'en-US' })}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700"
-          >
-            <Volume2 className="h-3.5 w-3.5" />
-            <span>US 1.0×</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => void play({ word: item.word, audioUrl: item.audioUrl, rate: 0.7, accent: 'en-GB' })}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700"
-          >
-            <Volume2 className="h-3.5 w-3.5" />
-            <span>UK 0.7×</span>
-          </button>
-        </div>
+        <AudioPlayerControls
+          word={item.word}
+          audioUrl={item.audioUrl}
+          align="center"
+          className="mt-4"
+        />
 
         {flipped ? (
           <div className="mt-6 rounded-xl border border-indigo-100 bg-white p-4 text-left">

@@ -54,11 +54,11 @@ export function LeitnerBoxesBar({
   onSelectBox?: (box: number | null) => void;
 }) {
   return (
-    <section aria-label="Phân bổ 5 Hộp Leitner" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs">
+    <section aria-label="Phân bổ 5 Hộp ghi nhớ" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="font-heading text-base font-extrabold text-slate-900">
-            5 Hộp ghi nhớ Leitner (SM-2)
+            5 Hộp ghi nhớ từ vựng
           </h2>
           <p className="text-xs text-slate-500">
             Trả lời đúng đẩy từ lên hộp cao hơn; trả lời sai đưa về Hộp 1 để củng cố ngay.

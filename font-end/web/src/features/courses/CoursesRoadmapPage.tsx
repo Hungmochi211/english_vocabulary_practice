@@ -5,6 +5,7 @@ import { BookOpen, CheckCircle2, Lock, PlayCircle, Sparkles } from 'lucide-react
 import { learningApi } from '@/services/api/learning.api';
 import { vocabularyApi } from '@/services/api/vocabulary.api';
 import { EmptyState, ErrorRetryBox, Skeleton } from '@/components/common/CommonUi';
+import { CustomSelect } from '@/components/common/CustomSelect';
 import type { CefrLevel } from '@/types/models';
 
 const CEFR_OPTIONS: Array<{ value: CefrLevel | ''; label: string }> = [
@@ -37,7 +38,7 @@ export function CoursesRoadmapPage() {
     <div className="space-y-6">
       <header className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xs sm:flex-row sm:items-center">
         <div>
-          <h1 className="font-heading text-2xl font-extrabold text-slate-900">Khóa học & Lộ trình CEFR</h1>
+          <h1 className="font-heading text-2xl font-extrabold text-slate-900">Khóa học & Lộ trình học</h1>
           <p className="mt-1 text-sm text-slate-600">
             Học theo chu trình 2 bước: Mở 100% thẻ Flashcard (Bước 1) → Thực hành đạt ≥ 80% (Bước 2) để mở khóa bài tiếp theo.
           </p>
@@ -50,7 +51,7 @@ export function CoursesRoadmapPage() {
 
       {/* Filter Bar: CEFR + Topic */}
       <section className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Lọc theo cấp độ CEFR">
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Lọc theo trình độ">
           {CEFR_OPTIONS.map((opt) => {
             const active = selectedLevel === opt.value;
             return (
@@ -75,19 +76,17 @@ export function CoursesRoadmapPage() {
           <label htmlFor="topic-filter" className="text-xs font-semibold text-slate-600">
             Chủ đề:
           </label>
-          <select
+          <CustomSelect
             id="topic-filter"
-            value={selectedTopicId ?? ''}
-            onChange={(e) => setSelectedTopicId(e.target.value ? Number(e.target.value) : null)}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-indigo-400"
-          >
-            <option value="">Tất cả chủ đề</option>
-            {topics.map((topic) => (
-              <option key={topic.id} value={topic.id}>
-                {topic.name}
-              </option>
-            ))}
-          </select>
+            ariaLabel="Lọc theo chủ đề"
+            value={selectedTopicId ? String(selectedTopicId) : ''}
+            onChange={(val) => setSelectedTopicId(val ? Number(val) : null)}
+            options={[
+              { value: '', label: 'Tất cả chủ đề' },
+              ...topics.map((topic) => ({ value: String(topic.id), label: topic.name })),
+            ]}
+            align="right"
+          />
         </div>
       </section>
 
@@ -111,7 +110,7 @@ export function CoursesRoadmapPage() {
       ) : lessons.length === 0 ? (
         <EmptyState
           title="Không tìm thấy bài học phù hợp"
-          description="Thử chọn cấp độ CEFR hoặc chủ đề khác để tiếp tục hành trình học từ vựng."
+          description="Thử chọn trình độ hoặc chủ đề khác để tiếp tục hành trình học từ vựng."
           action={
             <button
               type="button"

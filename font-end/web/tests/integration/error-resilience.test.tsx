@@ -94,7 +94,7 @@ describe('T068 - SC-007: Error Resilience (500/503/Network Failure + Retry Recov
 
     renderWithFreshClient('/review');
 
-    expect(await screen.findByRole('heading', { name: /Trung tâm Ôn tập SM-2/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Trung tâm Ôn tập/i })).toBeInTheDocument();
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Thử lại/i })).toBeInTheDocument();
   });

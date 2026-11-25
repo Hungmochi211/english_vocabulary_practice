@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowRight,
-  Award,
   BellRing,
   Camera,
   History,
@@ -21,9 +20,15 @@ import {
 } from '@/services/adapters/leaderboard.adapter';
 import { localAvatarAdapter } from '@/services/adapters/avatar.adapter';
 import { useToast } from '@/components/common/CommonUi';
+import { CustomSelect } from '@/components/common/CustomSelect';
+import { RankBadge } from '@/components/common/RankBadge';
 import { LearnedWordsCard, StreakCard, XpCard } from '@/components/common/StreakCard';
+import {
+  GroupLeaderboardModal,
+  QuickProfileModal,
+} from '@/features/dashboard/WeeklyLeaderboard';
 import { getInitials } from '@/utils/formatters';
-import type { CefrLevel } from '@/types/models';
+import type { CefrLevel, LeaderboardMember } from '@/types/models';
 
 const DAILY_GOAL_STORAGE_KEY = 'lexitag:v1:daily-goal';
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
@@ -120,6 +125,8 @@ export function ProfilePage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<LeaderboardMember | null>(null);
 
   const meQuery = useQuery({
     queryKey: ['users', 'me'],
@@ -150,6 +157,7 @@ export function ProfilePage() {
       'leaderboard',
       'weekly',
       user?.fullName,
+      user?.avatarUrl,
       user?.targetLevel,
       overviewQuery.data?.totalXp ?? 0,
       overviewQuery.data?.currentStreak ?? 0,
@@ -319,10 +327,14 @@ export function ProfilePage() {
                 Mục tiêu {user?.targetLevel ?? 'B2'}
               </span>
               {myRank && (
-                <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-800">
-                  <Award className="h-3.5 w-3.5" />
-                  <span>{formatRankBadgeLabel(myRank)}</span>
-                </span>
+                <button
+                  type="button"
+                  onClick={() => setLeaderboardOpen(true)}
+                  title="Xem bảng xếp hạng nhóm tuần này"
+                  className="cursor-pointer rounded-full transition hover:scale-[1.02] hover:brightness-97 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+                >
+                  <RankBadge rank={myRank} size="sm" />
+                </button>
               )}
             </div>
           </div>
@@ -447,19 +459,25 @@ export function ProfilePage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor="profile-cefr" className="mb-1 block text-xs font-bold text-slate-700">
-                Mục tiêu CEFR
+                Mục tiêu trình độ
               </label>
-              <select
+              <CustomSelect
                 id="profile-cefr"
+                ariaLabel="Mục tiêu trình độ"
                 value={targetLevel}
-                onChange={(e) => setTargetLevel(e.target.value as CefrLevel)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-indigo-500"
-              >
-                <option value="A1">A1 — Cơ bản</option>
-                <option value="A2">A2 — Sơ cấp</option>
-                <option value="B1">B1 — Trung cấp</option>
-                <option value="B2">B2 — Trung cao cấp</option>
-              </select>
+                onChange={(val) => {
+                  dirtyRef.current = true;
+                  setTargetLevel(val as CefrLevel);
+                }}
+                options={[
+                  { value: 'A1', label: 'A1 — Cơ bản' },
+                  { value: 'A2', label: 'A2 — Sơ cấp' },
+                  { value: 'B1', label: 'B1 — Trung cấp' },
+                  { value: 'B2', label: 'B2 — Trung cao cấp' },
+                ]}
+                size="md"
+                fullWidth
+              />
             </div>
             <div>
               <label htmlFor="profile-goal" className="mb-1 block text-xs font-bold text-slate-700">
@@ -577,6 +595,21 @@ export function ProfilePage() {
           </button>
         </form>
       </div>
+
+      <GroupLeaderboardModal
+        open={leaderboardOpen}
+        loading={leaderboardQuery.isLoading}
+        error={leaderboardQuery.isError}
+        members={leaderboardQuery.data ?? []}
+        onRetry={() => void leaderboardQuery.refetch()}
+        onSelectMember={(member) => setSelectedMember(member)}
+        onClose={() => setLeaderboardOpen(false)}
+      />
+
+      <QuickProfileModal
+        member={selectedMember}
+        onClose={() => setSelectedMember(null)}
+      />
     </div>
   );
 }

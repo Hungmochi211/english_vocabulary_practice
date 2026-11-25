@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HelpCircle, History, LogOut, Settings, Shield, User } from 'lucide-react';
+import { HelpCircle, History, LogOut, Moon, Settings, Shield, Sun, User } from 'lucide-react';
 import { useAuth } from '@/app/AuthProvider';
+import { useTheme } from '@/app/ThemeProvider';
 import { getInitials } from '@/utils/formatters';
 
 export const OPEN_SUPPORT_WIDGET_EVENT = 'lexitag:open-support';
@@ -20,6 +21,7 @@ interface MenuEntry {
 
 export function AccountMenu({ onRequestLogout }: AccountMenuProps) {
   const { user, isAdmin } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
@@ -64,6 +66,12 @@ export function AccountMenu({ onRequestLogout }: AccountMenuProps) {
         onSelect: () => navigate('/profile'),
       },
       {
+        id: 'theme',
+        label: isDark ? 'Giao diện sáng' : 'Giao diện tối',
+        icon: isDark ? Sun : Moon,
+        onSelect: toggleTheme,
+      },
+      {
         id: 'help',
         label: 'Hỗ trợ & Góp ý',
         icon: HelpCircle,
@@ -79,7 +87,7 @@ export function AccountMenu({ onRequestLogout }: AccountMenuProps) {
       });
     }
     return list;
-  }, [isAdmin, navigate]);
+  }, [isAdmin, isDark, navigate, toggleTheme]);
 
   const allItems = useMemo<MenuEntry[]>(
     () => [

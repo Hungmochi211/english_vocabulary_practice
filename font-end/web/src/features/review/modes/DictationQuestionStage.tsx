@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Eye, Volume2 } from 'lucide-react';
-import { useVocabularyAudio } from '@/hooks/useVocabularyAudio';
+import { Eye } from 'lucide-react';
+import { AudioPlayerControls } from '@/components/common/AudioPlayerControls';
 import type { QuizQuestion } from '@/types/models';
 
 export interface DictationQuestionStageProps {
@@ -18,14 +18,13 @@ export function DictationQuestionStage({
   onChange,
   onEnterNext,
 }: DictationQuestionStageProps) {
-  const { play } = useVocabularyAudio();
   const [revealMeaning, setRevealMeaning] = useState(false);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-slate-500">
         <span className="rounded-md bg-indigo-50 px-2.5 py-1 text-indigo-700">
-          Nghe chép chính tả (Dictation)
+          Nghe chép chính tả
         </span>
         {question.prompt.phonetic && <span className="font-mono">{question.prompt.phonetic}</span>}
       </div>
@@ -35,38 +34,13 @@ export function DictationQuestionStage({
           Nhấn nghe phát âm và chép lại chính xác từ tiếng Anh bạn nghe được
         </p>
 
-        <div className="mt-4 flex flex-wrap justify-center gap-2.5">
-          <button
-            type="button"
-            onClick={() =>
-              void play({
-                word: spokenFallbackText,
-                audioUrl: question.prompt.audioUrl,
-                rate: 1,
-                accent: 'en-US',
-              })
-            }
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-indigo-700"
-          >
-            <Volume2 className="h-4 w-4" />
-            <span>Nghe chuẩn US (1.0×)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              void play({
-                word: spokenFallbackText,
-                audioUrl: question.prompt.audioUrl,
-                rate: 0.7,
-                accent: 'en-GB',
-              })
-            }
-            className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-white px-4 py-2.5 text-xs font-bold text-indigo-700 transition hover:bg-indigo-50"
-          >
-            <Volume2 className="h-4 w-4" />
-            <span>Nghe chậm UK (0.7×)</span>
-          </button>
-        </div>
+        <AudioPlayerControls
+          word={spokenFallbackText}
+          audioUrl={question.prompt.audioUrl}
+          align="center"
+          prominent
+          className="mt-4"
+        />
 
         {question.prompt.vietnameseMeaning && (
           <div className="mt-4">

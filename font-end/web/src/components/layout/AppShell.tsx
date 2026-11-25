@@ -10,14 +10,17 @@ import {
   Home,
   LogOut,
   Menu,
+  Moon,
   Search,
   Settings,
   Shield,
+  Sun,
   User,
   X,
   Zap,
 } from 'lucide-react';
 import { useAuth } from '@/app/AuthProvider';
+import { useTheme } from '@/app/ThemeProvider';
 import { httpClient } from '@/services/api/httpClient';
 import { formatXp, getInitials } from '@/utils/formatters';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -39,6 +42,7 @@ const NAV_ITEMS = [
 
 export function AppShell() {
   const { user, isAdmin, logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -271,6 +275,16 @@ export function AppShell() {
               <Zap className="h-4 w-4 text-slate-700" />
               <span>{formatXp(totalXp)} XP</span>
             </span>
+
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={isDark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}
+              title={isDark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
+            >
+              {isDark ? <Sun className="h-4.5 w-4.5 text-amber-400" /> : <Moon className="h-4.5 w-4.5" />}
+            </button>
 
             <NotificationBell />
 

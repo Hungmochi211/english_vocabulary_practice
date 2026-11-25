@@ -225,6 +225,14 @@ export function LoginPage() {
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pr-3.5 pl-10 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:bg-white"
               />
             </div>
+            <div className="mt-2 text-left">
+              <Link
+                to="/forgot-password"
+                className="text-xs font-semibold text-indigo-700 hover:underline"
+              >
+                Quên mật khẩu?
+              </Link>
+            </div>
           </div>
 
           <button

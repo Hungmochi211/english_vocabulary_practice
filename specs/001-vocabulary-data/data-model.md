@@ -16,7 +16,7 @@ Tài liệu này định nghĩa chi tiết cấu trúc các bảng cơ sở dữ
 
 ### 1.1. Topic (Chủ đề bài học)
 
-Lưu trữ danh mục 16 chủ đề chuẩn hóa xuyên suốt 4 cấp độ CEFR (8 chủ đề A1–B1 và 8 chủ đề B2).
+Lưu trữ danh mục 16 chủ đề chuẩn hóa xuyên suốt 4 cấp độ CEFR (8 chủ đề Đời sống & Giao tiếp và 8 chủ đề Học thuật & Chuyên sâu, phân loại theo ngữ nghĩa).
 
 | Cột (Column) | Kiểu dữ liệu | Nullable | Ràng buộc / Quy tắc | Chú thích nghiệp vụ |
 | :--- | :--- | :---: | :--- | :--- |

@@ -8,7 +8,7 @@ Dự án Web App học từ vựng tiếng Anh thông minh với thuật toán S
 
 Dữ liệu từ vựng đã được trích xuất, làm sạch và lưu tại file Excel:
 - **`oxford_3000_vocabulary.xlsx`**: File Excel tổng hợp gồm các sheet:
-  - **Sheet `A1`**: 1.075 từ vựng cấp độ A1 (đã tách riêng từng loại từ).
+  - **Sheet `A1`**: 1.074 từ vựng cấp độ A1 (đã tách riêng từng loại từ).
   - **Sheet `A2`**: 995 từ vựng cấp độ A2 (đã tách riêng từng loại từ).
   - **Sheet `B1`**: 908 từ vựng cấp độ B1 (đã tách riêng từng loại từ).
   - **Sheet `B2`**: 836 từ vựng cấp độ B2 (đã tách riêng từng loại từ).
@@ -133,3 +133,8 @@ Dưới đây là danh sách các script Python đã được xây dựng trong 
 ### 6. `fill_b2_vietnamese.py` (Hoàn thiện nghĩa và ví dụ tiếng Việt cho B2)
 - **Tác dụng:** Dịch tự động theo ngữ cảnh loại từ và bổ sung bản dịch tiếng Việt cho toàn bộ 836 dòng từ vựng cấp độ B2.
 - **Hoạt động:** Sử dụng đa luồng (`ThreadPoolExecutor`) kết hợp client dịch ngữ cảnh theo tiền tố (`to + verb`, `the + noun`, `being + adj`) để tránh bị chặn IP và đem lại bản dịch sát nghĩa nhất.
+
+
+### 7. `apply_semantic_topics.py` & `topic_semantic_map.json` (Chuẩn hóa ngữ nghĩa 16 chủ đề)
+- **Tác dụng:** Thay thế hoàn toàn cơ chế băm ký tự cũ (`sum(ord(c)) % 8`) bằng bộ phân loại ngữ nghĩa 2 tầng (8 chủ đề Học thuật & Chuyên sâu + 8 chủ đề Đời sống & Giao tiếp) kèm Cây quyết định ranh giới.
+- **Hoạt động:** Gán nhãn chủ đề chuẩn xác theo từng dòng `(word, part_of_speech, vietnamese_meaning, example_en)` xuyên cấp độ A1–B2 và kiểm định 100% các cụm `(cefr_level, topic)` có từ đều phân hoạch hợp lệ thành bài học 15–18 từ (bài cuối $\le 20$ từ, 0 cảnh báo `SEED_WARNING`).

@@ -16,10 +16,10 @@
 2. [CÁC TÁC NHÂN HỆ THỐNG (ACTORS)](#2-các-tác-nhân-hệ-thống-actors)
 3. [YÊU CẦU CHỨC NĂNG (FUNCTIONAL REQUIREMENTS - FR)](#3-yêu-cầu-chức-năng-functional-requirements---fr)
    * 3.1. Phân hệ 1: Quản lý người dùng & Xác thực (User Management & Auth)
-   * 3.2. Phân hệ 2: Quản lý từ điển, Chủ đề & Bộ thẻ học (Dictionary & Decks)
+   * 3.2. Phân hệ 2: Quản lý Chủ đề, Lộ trình & Bộ thẻ học (Topics, Lessons & Decks)
    * 3.3. Phân hệ 3: Luyện tập thông minh & Thuật toán Spaced Repetition (SRS SM-2 & Leitner)
    * 3.4. Phân hệ 4: Chấm điểm tương thích & Phân tích sai số (Levenshtein & Soundex)
-   * 3.5. Phân hệ 5: Trợ lý ảo AI & Truy xuất ngữ cảnh (Gemini AI Tutor + RAG)
+   * 3.5. Phân hệ 5: Trợ lý ảo AI mức MVP & Kiểm soát Token (Gemini AI Tutor)
    * 3.6. Phân hệ 6: Trò chơi hóa, Thống kê tiến độ & Nhắc nhở (Gamification & Retention)
    * 3.7. Phân hệ 7: Quản trị hệ thống (Admin Portal)
 4. [YÊU CẦU PHI CHỨC NĂNG (NON-FUNCTIONAL REQUIREMENTS - NFR)](#4-yêu-cầu-phi-chức-năng-non-functional-requirements---nfr)
@@ -48,7 +48,7 @@ Xây dựng một hệ thống Website hiện đại, thông minh, tối ưu tr�
 1. **Kho học liệu chuẩn hóa:** 3.813 từ vựng cốt lõi Oxford 3000 phân bổ từ A1 đến B2, chuẩn hóa 100% phiên âm IPA Oxford, câu ví dụ ngữ cảnh Anh – Việt và phân chia thành 16 chủ đề thực tế.
 2. **Thuật toán Spaced Repetition (SM-2 & Hộp Leitner):** Tính toán chính xác thời điểm vàng cần ôn tập cho từng từ vựng của từng học viên, chuyển từ vựng từ trí nhớ ngắn hạn sang trí nhớ dài hạn.
 3. **Chấm điểm thông minh với Levenshtein & Soundex:** Phân loại sai sót giúp người học nhận biết bản thân "gõ nhầm phím" hay "hiểu sai quy tắc chính tả phát âm".
-4. **Trợ lý gia sư AI (Gemini 2.5 Flash + RAG):** Tích hợp AI giải thích lỗi sai trực tiếp, sửa bài tập đặt câu và đóng vai đàm thoại tình huống thực tế theo chủ đề bài học.
+4. **Trợ lý gia sư AI mức MVP (Gemini AI API):** Tích hợp AI ở mức MVP (Prompt Engineering) để gợi ý giải nghĩa theo ngữ cảnh, giải thích lỗi sai trực tiếp, hỏi đáp với gia sư AI và sửa câu cơ bản kèm kiểm soát hạn mức Token. (Hạ tầng CSDL sẵn sàng mở rộng lên Semantic RAG với `pgvector` ở giai đoạn sau).
 5. **Cơ chế Gamification & Giữ chân học viên:** Chuỗi ngày học liên tục (Streak), Điểm kinh nghiệm (XP), Bảng xếp hạng hàng tuần, Hệ thống huy hiệu thành tích và Email nhắc nhở tự động định kỳ.
 
 ---
@@ -57,11 +57,9 @@ Xây dựng một hệ thống Website hiện đại, thông minh, tối ưu tr�
 
 | Tác nhân (Actor) | Mô tả vai trò | Quyền hạn chính |
 | :--- | :--- | :--- |
-| **Khách vãng lai (Guest)** | Người dùng chưa đăng nhập hệ thống | Xem trang giới thiệu, tra cứu nhanh từ điển Oxford 3000 ở chế độ xem thử, làm bài kiểm tra phân loại trình độ đầu vào (Placement Test). |
-| **Học viên (Learner / Student)** | Người dùng đã đăng ký và xác thực tài khoản | Học theo lộ trình CEFR (A1–B2) hoặc chủ đề, tự tạo bộ thẻ (Deck), thực hiện các phiên ôn tập SM-2 hàng ngày, tích lũy XP/Streak, trò chuyện hỏi đáp với Trợ lý AI Gemini. |
-| **Quản trị viên (Admin)** | Người quản lý vận hành toàn bộ hệ thống | Quản trị kho từ điển trung tâm (thêm/sửa/xóa từ vựng, chủ đề), quản lý tài khoản người dùng, giám sát lượng tiêu thụ API Token Gemini, thống kê báo cáo hệ thống. |
-| **Hệ thống tự động (Cron & Job Queue)** | Các tác vụ nền chạy ngầm (NestJS Schedule & Redis BullMQ) | Quét kiểm tra trạng thái đứt chuỗi Streak vào 00:00 hàng ngày, quét gửi email nhắc học vào khung giờ người dùng cài đặt, tính toán tổng kết bảng xếp hạng tuần. |
-| **Dịch vụ tích hợp bên ngoài (External APIs)** | Các nền tảng dịch vụ bên thứ ba | Google OAuth2 (xác thực), Google Gemini API (trợ lý AI), SendGrid/Resend (gửi Email transactional), Web Speech API / Cloud TTS (phát âm giọng bản xứ). |
+| **Người học (User / Learner)** | Tác nhân người dùng duy nhất phía học tập (gộp chung trước và sau đăng nhập, không tách riêng Guest) | Trước khi xác thực: Đăng ký tài khoản, Đăng nhập (cục bộ hoặc Google OAuth2), Khôi phục mật khẩu. Sau khi đăng nhập: Học theo lộ trình CEFR (A1–B2) hoặc chủ đề, tự tạo bộ thẻ Flashcard (Deck), thực hiện các phiên ôn tập SM-2 hàng ngày, tích lũy XP/Streak, xem dashboard tiến độ & đánh giá học tập, trò chuyện hỏi đáp với Trợ lý AI. |
+| **Quản trị viên (Admin)** | Người quản lý vận hành toàn bộ hệ thống | Đăng nhập/Đăng xuất cổng quản trị, quản trị kho từ vựng gốc (thêm/sửa/xóa từ vựng, chủ đề), quản lý tài khoản người dùng, cấu hình dịch vụ AI và giám sát lượng tiêu thụ API Token, thống kê báo cáo hệ thống. |
+| **Dịch vụ AI bên ngoài (Service AI Provider)** | Nền tảng dịch vụ trí tuệ nhân tạo bên thứ ba | Google Gemini API / OpenAI API xử lý gợi ý giải nghĩa và hỏi đáp với Gia sư AI. *(Các dịch vụ hạ tầng phụ trợ khác như Google OAuth2, Email SMTP/Resend, Web Speech API được mô tả trong luồng đặc tả chi tiết).* |
 
 ---
 
@@ -88,13 +86,12 @@ Xây dựng một hệ thống Website hiện đại, thông minh, tối ưu tr�
 
 ---
 
-### 3.2. Phân hệ 2: Quản lý từ điển, Chủ đề & Bộ thẻ học (Dictionary & Decks)
+### 3.2. Phân hệ 2: Quản lý Chủ đề, Lộ trình & Bộ thẻ học (Topics, Lessons & Decks)
 
-* **FR-06: Tra cứu từ điển thông minh & Khám phá từ vựng theo 16 chủ đề (Dictionary Search & Topic Exploration):**
-  * Hợp nhất tính năng tra cứu từ điển và khám phá theo chủ đề thành một trung tâm học liệu toàn diện:
-  * **Tra cứu từ điển:** Cho phép tra cứu nhanh trong toàn bộ kho **3.813 từ vựng chuẩn hóa Oxford 3000** (`A1`: 1.074, `A2`: 995, `B1`: 908, `B2`: 836; lọc `is_active = TRUE`). Hỗ trợ tìm kiếm tiền tố không phân biệt hoa thường (`LOWER(word) text_pattern_ops`), tìm kiếm mờ dung sai lỗi chính tả và tìm kiếm ngữ nghĩa tiếng Việt thông qua chỉ mục `GIN` với tiện ích mở rộng `pg_trgm` (`idx_vocab_meaning_trgm`). Hỗ trợ đầy đủ các cặp từ đồng âm/đa nghĩa hợp lệ chuẩn Oxford thông qua `sense_number`.
-  * **Khám phá theo 16 Chủ đề chuẩn:** Tích hợp bộ lọc và duyệt từ vựng theo danh mục 16 chủ đề ngữ cảnh (*People & Relationships*, *Food & Health*, *Business & Workplace*, *Science & Technology*...) phân bổ trên 32 nhóm `(cấp độ, chủ đề)`. Hiển thị số lượng từ và thanh tiến độ hoàn thành của học viên trên từng chủ đề.
-  * **Chi tiết học liệu chuẩn hóa:** Hiển thị đầy đủ 9 trường thông tin: Mặt chữ, Cấp độ CEFR, Từ loại (14 nhãn chuẩn Oxford), Phiên âm IPA chuẩn Oxford, Nút phát âm âm thanh (Audio pronunciation UK/US), Nghĩa tiếng Việt chính xác, Câu ví dụ tiếng Anh độc lập theo từng từ loại (không dùng chung câu giữa các từ loại khác nhau), Bản dịch nghĩa tiếng Việt của ví dụ và Chủ đề liên quan.
+* **FR-06: Khám phá từ vựng theo 16 chủ đề & Xem chi tiết học liệu (Topic Exploration & Vocabulary Details):**
+  * *(Lưu ý phạm vi: Hệ thống hiện tại không triển khai module Tra cứu từ điển độc lập mà tập trung tổ chức học liệu theo chủ đề và bài học lộ trình).*
+  * **Khám phá theo 16 Chủ đề chuẩn:** Duyệt từ vựng trong kho **3.813 từ vựng chuẩn hóa Oxford 3000** (`A1`: 1.074, `A2`: 995, `B1`: 908, `B2`: 836; lọc `is_active = TRUE`) theo danh mục 16 chủ đề ngữ cảnh (*People & Relationships*, *Food & Health*, *Business & Workplace*, *Science & Technology*...) phân bổ trên 32 nhóm `(cấp độ, chủ đề)`. Hiển thị số lượng từ và thanh tiến độ hoàn thành của học viên trên từng chủ đề.
+  * **Chi tiết học liệu chuẩn hóa:** Hiển thị đầy đủ 9 trường thông tin trong thẻ học/bài học: Mặt chữ, Cấp độ CEFR, Từ loại (14 nhãn chuẩn Oxford), Phiên âm IPA chuẩn Oxford, Nút phát âm âm thanh (Audio pronunciation UK/US), Nghĩa tiếng Việt chính xác, Câu ví dụ tiếng Anh độc lập theo từng từ loại (không dùng chung câu giữa các từ loại khác nhau), Bản dịch nghĩa tiếng Việt của ví dụ và Chủ đề liên quan.
 * **FR-07: Bài học lộ trình chuẩn của hệ thống & Quy trình học 2 bước (System Lessons & Unlock Gate $\ge 80\%$):**
   * Cung cấp **239 bài học lộ trình hệ thống** (`deck_type = 'system_lesson'`) chia đều theo từng nhóm `(cấp độ, chủ đề)` (`A1`: 68, `A2`: 61, `B1`: 56, `B2`: 54), đảm bảo **100% bài học có từ 15 đến 20 từ** (15–18 từ/bài, bài cuối tối đa 20 từ), cố định thứ tự bài (`order_index`) và thứ tự thẻ (`order_in_lesson`).
   * **Quy trình sư phạm 2 bước & Cổng mở khóa ($\ge 80\%$):**
@@ -102,7 +99,7 @@ Xây dựng một hệ thống Website hiện đại, thông minh, tối ưu tr�
     2. **Bước 2 – Học áp dụng & Mở khóa tuần tự:** Học viên làm bài kiểm tra áp dụng (tính cả điểm `0,50` cho câu gần đúng). Đạt từ **$\ge 80,00\%$** sẽ đánh dấu `is_completed = TRUE` và mở khóa bài học kế tiếp (`order_index + 1`). Nếu học viên làm lại bài đã qua với điểm thấp hơn $80\%$, hệ thống **không thu hồi** trạng thái hoàn thành và giữ nguyên `best_score`.
 * **FR-08: Quản lý bộ thẻ học cá nhân (Custom Decks):**
   * Cho phép học viên tự tạo bộ thẻ học riêng (ví dụ: *"Từ vựng cần nhớ cho kỳ thi cuối kỳ"*).
-  * Thêm/bớt các từ vựng từ từ điển vào bộ thẻ cá nhân.
+  * Thêm/bớt các từ vựng từ kho học liệu hệ thống vào bộ thẻ cá nhân.
   * Cấu hình quyền riêng tư cho bộ thẻ: Công khai (`is_public = TRUE` để cộng đồng cùng học) hoặc Cá nhân (`FALSE`).
 
 ---
@@ -163,22 +160,19 @@ Xây dựng một hệ thống Website hiện đại, thông minh, tối ưu tr�
 
 ---
 
-### 3.5. Phân hệ 5: Trợ lý ảo AI, Semantic RAG (`pgvector`) & Function Calling Level 2
+### 3.5. Phân hệ 5: Trợ lý ảo AI mức MVP & Kiểm soát Token (Gemini AI Tutor)
 
-* **FR-17: Trợ giảng AI giải thích lỗi sai theo ngữ cảnh Semantic RAG (`pgvector`):**
-  * Khi học viên làm sai một câu hỏi trong phiên luyện tập, nút *"Hỏi gia sư AI"* cho phép gửi thông tin bài tập (từ vựng, loại từ, đáp án người học nhập, lỗi Damerau-Levenshtein/Soundex) tới **Gemini AI**.
-  * Nhờ cơ chế **Semantic RAG** kết hợp VectorDB `pgvector` (`vocabulary_embeddings` với chỉ mục `HNSW` cosine distance) và lịch sử lỗi sai cá nhân (`review_logs`), AI truy xuất đúng ngữ cảnh từ điển chuẩn Oxford để giải thích: Tại sao đáp án đó sai? Cách phân biệt với từ gần nghĩa/đồng âm? Mẹo ghi nhớ nhanh bằng gốc từ (*etymology*).
-* **FR-18: Đóng vai đàm thoại & Chatbot AI Level 2 (Function Calling):**
-  * Người học mở hội thoại trong `chat_conversations` (`type = 'ai_assistant'`; đồng thời bảng sẵn sàng mở rộng luồng hỗ trợ trực tuyến `'admin_support'`) để luyện hội thoại tình huống (*Đặt món ăn*, *Phỏng vấn xin việc*, *Hỏi đường*...) hoặc hỏi đáp tự do.
-  * AI hỗ trợ **Function Calling Level 2** với đúng **3 công cụ được cấp phép** (ghi vết kiểm chứng vào `chat_messages.tool_calls` kiểu `JSONB`):
-    1. `lookup_vocabulary`: Tra cứu dữ liệu từ điển chuẩn Oxford trực tiếp từ CSDL.
-    2. `get_user_study_status`: Đọc tiến độ học tập, số từ đến hạn SM-2 và chuỗi Streak hiện tại của học viên.
-    3. `generate_quick_quiz`: Tạo nhanh bài kiểm tra nhỏ cá nhân hóa từ danh sách từ đang học hoặc hay sai.
+* **FR-17: Trợ giảng AI gợi ý & giải thích lỗi sai (Mức MVP – Prompt Engineering):**
+  * Khi học viên làm sai hoặc gặp từ khó trong phiên luyện tập, nút *"Xem gợi ý / Giải nghĩa"* hoặc *"Hỏi gia sư AI"* cho phép gửi ngữ cảnh bài tập (từ vựng, loại từ, đáp án người học nhập, lỗi Damerau-Levenshtein/Soundex) tới **Gemini AI API**.
+  * Ở giai đoạn MVP, hệ thống sử dụng Prompt cấu trúc kèm dữ liệu từ vựng chuẩn trong CSDL để AI giải thích: Tại sao đáp án sai, cách phân biệt với từ dễ nhầm lẫn và mẹo ghi nhớ nhanh. *(Hạ tầng VectorDB `pgvector` trong `vocabulary_embeddings` được chuẩn bị sẵn cho giai đoạn mở rộng Semantic RAG).*
+* **FR-18: Hỏi đáp với Gia sư AI (AI Tutor Chat – Mức MVP):**
+  * Người học mở hội thoại trong `chat_conversations` (`type = 'ai_assistant'`; đồng thời bảng sẵn sàng mở rộng luồng hỗ trợ trực tuyến `'admin_support'`) để hỏi đáp tự do về từ vựng, ngữ cảnh sử dụng hoặc luyện hội thoại cơ bản theo chủ đề bài học.
+  * *(Ghi chú mở rộng: Cột `chat_messages.tool_calls` kiểu `JSONB` đã được thiết kế sẵn để nâng cấp lên Function Calling đa công cụ ở giai đoạn sau).*
 * **FR-19: Đặt câu và nhận xét ngữ pháp tức thì:**
-  * Học viên nhập một câu tự sáng tác chứa từ mới vừa học; AI Gemini chấm điểm câu văn, nhận xét tính tự nhiên (`feedback_type = 'grammar_check'`) và gợi ý 2–3 cách diễn đạt hay hơn của người bản xứ.
+  * Học viên nhập một câu tự sáng tác chứa từ mới vừa học; AI Gemini nhận xét câu văn (`feedback_type = 'grammar_check'`) và gợi ý 2–3 cách diễn đạt tự nhiên hơn.
 * **FR-20: Kiểm soát hạn ngạch Token & Chống lạm dụng API:**
-  * Mỗi lượt phản hồi từ Gemini API được ghi nhận số lượng `tokens_used` và vết `tool_calls` vào `chat_messages`.
-  * Giới hạn số lượt hỏi AI mỗi ngày tùy theo nhóm người dùng (ví dụ: tài khoản miễn phí tối đa 20 lượt chat/ngày) để bảo đảm ngân sách chi phí vận hành.
+  * Mỗi lượt phản hồi từ Gemini API được ghi nhận số lượng `tokens_used` vào `chat_messages`.
+  * Giới hạn số lượt hỏi AI / hạn mức Token mỗi ngày tùy theo cấu hình của Admin để bảo đảm ngân sách chi phí vận hành.
 
 ---
 
@@ -225,8 +219,8 @@ Xây dựng một hệ thống Website hiện đại, thông minh, tối ưu tr�
 
 ### 4.1. Hiệu năng & Tải (Performance & Scalability)
 * **NFR-01 (Thời gian phản hồi API):**
-  * Các API truy vấn dữ liệu từ điển, danh sách từ đến hạn ôn tập SM-2 (`GET /api/v1/reviews/due-today`) phải có thời gian phản hồi máy chủ $\le 100\text{ ms}$ (95th percentile $\le 50\text{ ms}$).
-  * API tìm kiếm từ điển song ngữ hỗ trợ gõ gợi ý tức thì (Debounced Search) phản hồi $\le 150\text{ ms}$.
+  * Các API truy vấn dữ liệu bài học/chủ đề, danh sách từ đến hạn ôn tập SM-2 (`GET /api/v1/reviews/due-today`) phải có thời gian phản hồi máy chủ $\le 100\text{ ms}$ (95th percentile $\le 50\text{ ms}$).
+  * Các API tải danh sách từ vựng theo chủ đề và tiến độ học tập phản hồi $\le 150\text{ ms}$.
 * **NFR-02 (Tối ưu hóa bộ nhớ CSDL & Shared Buffers):**
   * Khóa chính và khóa ngoại sử dụng `INTEGER` (4 bytes, dải giá trị tới 2,14 tỷ) tương thích tự nhiên với kiểu `number` của TypeScript, giúp bảng chỉ mục B-Tree gọn nhẹ hơn 50% so với `BIGINT`, cho phép nạp toàn bộ chỉ mục của 3.813 từ vựng và hàng triệu bản ghi tiến độ vào RAM của PostgreSQL Shared Buffers.
 * **NFR-03 (Bộ đệm Caching với Redis):**
@@ -298,7 +292,7 @@ Bảng dưới đây chứng minh sự tương thích và bảo đảm **100% t�
 | Nhóm Yêu cầu chức năng | Mã yêu cầu (FR) | Bảng CSDL / Redis phụ trách | Cột dữ liệu & Chỉ mục cốt lõi |
 | :--- | :--- | :--- | :--- |
 | **Xác thực & Tài khoản** | FR-01, FR-02, FR-03, FR-04, FR-05 | `users`<br>`user_profiles`<br>`refresh_tokens`<br>**Redis (`TTL + GETDEL`)** | `email` (lowercase), `password_hash`, `google_id`, `email_verified_at`, `timezone`<br>`target_level`, `daily_target_words`, `strict_unlock_enabled`<br>`token_hash CHAR(64)`, `is_revoked`, `expires_at`<br>FR-05: Token/OTP quên mật khẩu & xác minh email lưu Redis TTL 15 phút |
-| **Từ điển, Lộ trình & Bộ thẻ** | FR-06, FR-07, FR-08 | `topics`<br>`vocabularies`<br>`vocabulary_embeddings`<br>`decks`<br>`deck_vocabularies` | `slug`, `name`<br>`word`, `cefr_level` (`A1..C2`), `part_of_speech`, `sense_number`, `stress_syllable`, `is_active`<br>`LOWER(word) text_pattern_ops`, `GIN pg_trgm`, `HNSW vector(768)`<br>`deck_type`, `topic_id`, `order_index`, `pass_score_threshold`, `deleted_at`, `order_in_lesson` (`DEFERRABLE`) |
+| **Chủ đề, Lộ trình & Bộ thẻ** | FR-06, FR-07, FR-08 | `topics`<br>`vocabularies`<br>`vocabulary_embeddings`<br>`decks`<br>`deck_vocabularies` | `slug`, `name`<br>`word`, `cefr_level` (`A1..C2`), `part_of_speech`, `sense_number`, `stress_syllable`, `is_active`<br>`LOWER(word) text_pattern_ops`, `GIN pg_trgm`, `HNSW vector(768)`<br>`deck_type`, `topic_id`, `order_index`, `pass_score_threshold`, `deleted_at`, `order_in_lesson` (`DEFERRABLE`) |
 | **Luyện tập 2 bước, SM-2 & Leitner** | FR-09, FR-10, FR-11, FR-12, FR-13 | `user_lesson_progress`<br>`user_vocabulary_progress`<br>`study_sessions` | `acquisition_completed`, `is_completed`, `best_score`, `last_score`, `pass_threshold_snapshot`<br>`leitner_box`, `repetitions`, `ease_factor DECIMAL(8,4)`, `total_reviews` (`GENERATED STORED`)<br>`Partial Index (user_id, next_review_date) WHERE status IN ('learning','reviewing')`<br>`session_type`, `total_score`, `score_percentage`, `xp_earned` |
 | **Chấm điểm & Sai số** | FR-14, FR-15, FR-16 | `review_logs` | `session_id`, `practice_mode`, `user_answer`, `question_payload JSONB`, `grading_status`, `score` (`0.00/0.50/1.00`)<br>`damerau_levenshtein_distance`, `soundex_matched`<br>`quality_rating`, `response_time_ms` |
 | **Trợ lý AI & Hỗ trợ Admin** | FR-17, FR-18, FR-19, FR-20 | `vocabulary_embeddings`<br>`chat_conversations`<br>`chat_messages` | `embedding vector(768)`, `content_hash`<br>`type` (`ai_assistant`/`admin_support`), `status`, `assigned_admin_id`, `title`<br>`content`, `sender`, `sender_user_id`, `feedback_type`, `tool_calls JSONB`, `tokens_used`, `read_at` |
@@ -318,11 +312,12 @@ flowchart LR
     C --> D["Giai đoạn 4<br>(Multi-Platform & Exams)"]
 ```
 
-### Giai đoạn 1: Hoàn thiện lõi Web B1 (Hiện tại - Quý 4/2026)
-* Hoàn thiện 100% các chức năng cốt lõi đã nêu trong đặc tả (SM-2, 5 chế độ học, Gemini RAG text chat, Streak & Email reminder).
+### Giai đoạn 1: Hoàn thiện lõi Web B1 – Bản MVP (Hiện tại - Quý 4/2026)
+* Hoàn thiện 100% các chức năng cốt lõi đã nêu trong đặc tả (SM-2, 5 chế độ học, Trợ lý AI Gemini mức MVP, Streak & Email reminder).
 * Đưa vào vận hành thử nghiệm trên nhóm sinh viên K68 CNTT Học viện Nông nghiệp Việt Nam để thu thập dữ liệu phản hồi thực tế và đánh giá hiệu quả ghi nhớ từ vựng.
 
-### Giai đoạn 2: Trí tuệ nhân tạo âm thanh & Đánh giá phát âm (Speech Assessment - Quý 1/2027)
+### Giai đoạn 2: Nâng cấp AI chuyên sâu & Đánh giá phát âm (Advanced AI & Speech - Quý 1/2027)
+* **Nâng cấp Gia sư AI lên Semantic RAG (`pgvector`) & Function Calling:** Khai thác bảng `vocabulary_embeddings` (`HNSW`) và dữ liệu `review_logs` tích lũy từ giai đoạn MVP để cá nhân hóa lộ trình ôn tập, truy xuất ngữ cảnh tự động và sinh bài kiểm tra thích ứng.
 * **Tích hợp mô hình nhận dạng giọng nói Whisper AI / Azure Speech Service:** Cho phép học viên phát âm trực tiếp vào microphone; hệ thống chấm điểm độ chính xác phát âm ở cấp độ âm vị (Phoneme-level assessment), chỉ ra học viên bị nuốt âm cuối (*ending sounds* như `/s/`, `/t/`, `/d/`, `/k/`) hay phát âm sai trọng âm (*stress*).
 * **Trợ lý đàm thoại giọng nói thời gian thực (Live Gemini Audio Streaming):** Cho phép học viên đeo tai nghe và trò chuyện tương tác tự nhiên với gia sư AI bằng giọng nói thời gian thực với độ trễ cực thấp (< 500ms).
 

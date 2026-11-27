@@ -51,7 +51,7 @@ Chi tiết bảng dữ liệu và schema: xem [data-model.md](./data-model.md).
 
 **Scale/Scope**:
 - 4 cấp độ CEFR (A1, A2, B1, B2).
-- 16 chủ đề chuẩn hóa (8 chủ đề A1–B1 và 8 chủ đề B2).
+- 16 chủ đề chuẩn hóa (8 chủ đề Đời sống & Giao tiếp và 8 chủ đề Học thuật & Chuyên sâu, phân loại xuyên cấp độ theo ngữ nghĩa).
 - Khoảng ~3.813 từ vựng sau khi làm phẳng đa từ loại.
 - Khoảng ~200 - 230 bài học (lessons).
 

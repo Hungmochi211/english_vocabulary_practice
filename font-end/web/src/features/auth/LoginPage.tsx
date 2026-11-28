@@ -271,7 +271,11 @@ export function LoginPage() {
         {googleClientId && (
           <div
             ref={googleButtonContainerRef}
-            className={gisReady ? 'flex max-w-full justify-center overflow-hidden' : 'hidden'}
+            className={
+              gisReady
+                ? 'flex min-h-[44px] max-w-full justify-center overflow-hidden'
+                : 'flex h-0 max-w-full justify-center overflow-hidden opacity-0'
+            }
           />
         )}
 

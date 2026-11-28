@@ -786,6 +786,90 @@ export const handlers = [
     });
   }),
 
+  http.get(`${API_BASE}/stats/leaderboard`, async ({ request }) => {
+    const url = new URL(request.url);
+    const limit = Math.max(1, Math.min(50, Number(url.searchParams.get('limit') || 20)));
+    const peers = [
+      {
+        userId: 'peer-1',
+        fullName: 'Minh Khôi',
+        avatarUrl: null,
+        level: 'B2' as const,
+        weeklyXp: 3120,
+        wordsThisWeek: 148,
+        streakDays: 21,
+        badges: ['Top 1 Tuần', 'Bền bỉ 21 ngày'],
+        isCurrentUser: false,
+      },
+      {
+        userId: 'peer-2',
+        fullName: 'Thu Hà',
+        avatarUrl: null,
+        level: 'B1' as const,
+        weeklyXp: 2840,
+        wordsThisWeek: 126,
+        streakDays: 14,
+        badges: ['Streak 7+ ngày', 'Siêng năng'],
+        isCurrentUser: false,
+      },
+      {
+        userId: 'peer-3',
+        fullName: 'Hoàng Nam',
+        avatarUrl: null,
+        level: 'A2' as const,
+        weeklyXp: 2190,
+        wordsThisWeek: 92,
+        streakDays: 9,
+        badges: ['Streak 7+ ngày'],
+        isCurrentUser: false,
+      },
+      {
+        userId: 'peer-4',
+        fullName: 'Lan Anh',
+        avatarUrl: null,
+        level: 'B1' as const,
+        weeklyXp: 1940,
+        wordsThisWeek: 84,
+        streakDays: 6,
+        badges: ['Siêng năng'],
+        isCurrentUser: false,
+      },
+      {
+        userId: String(mockLearnerUser.id),
+        fullName: mockLearnerUser.fullName,
+        avatarUrl: mockLearnerUser.avatarUrl,
+        level: mockLearnerUser.targetLevel,
+        weeklyXp: Math.max(0, Math.round(mockDb.stats.totalXp)),
+        wordsThisWeek: Math.max(12, Math.round(mockDb.stats.totalXp / 24)),
+        streakDays: mockDb.stats.currentStreak,
+        badges:
+          mockDb.stats.currentStreak >= 7
+            ? ['Streak 7+ ngày', 'Học viên tích cực']
+            : ['Học viên mới'],
+        isCurrentUser: true,
+      },
+    ];
+
+    const ranked = [...peers]
+      .sort(
+        (a, b) =>
+          b.weeklyXp - a.weeklyXp ||
+          b.streakDays - a.streakDays ||
+          a.fullName.localeCompare(b.fullName),
+      )
+      .map((member, index) => ({
+        ...member,
+        rank: index + 1,
+      }))
+      .slice(0, limit);
+
+    return HttpResponse.json({
+      success: true,
+      data: ranked,
+      error: null,
+    });
+  }),
+
   http.get(`${API_BASE}/topics`, async () => {
     return HttpResponse.json({
       success: true,

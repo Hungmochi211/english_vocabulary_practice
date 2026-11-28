@@ -7,6 +7,7 @@ import type {
   CefrLevel,
   GradedAnswerResult,
   GradingStatus,
+  LeaderboardMember,
   LeitnerDistribution,
   LessonProgressItem,
   PaginatedData,
@@ -391,5 +392,33 @@ export function normalizeAuditLogEntry(raw: unknown): AuditLogEntry {
     targetId: (obj.targetId as number | string | undefined) ?? '',
     createdAt: String(obj.createdAt ?? ''),
     metadata: isRecord(obj.metadata) ? obj.metadata : undefined,
+  };
+}
+
+export function normalizeLeaderboardMember(raw: unknown, fallbackRank = 1): LeaderboardMember {
+  const obj = isRecord(raw) ? raw : {};
+  const levelStr = String(obj.level ?? obj.targetLevel ?? 'B1');
+  const level: CefrLevel =
+    levelStr === 'A1' || levelStr === 'A2' || levelStr === 'B1' || levelStr === 'B2'
+      ? levelStr
+      : 'B1';
+  const rawBadges = Array.isArray(obj.badges)
+    ? obj.badges.filter((b): b is string => typeof b === 'string' && b.trim().length > 0)
+    : [];
+
+  return {
+    userId: String(obj.userId ?? obj.id ?? fallbackRank),
+    fullName: String(obj.fullName ?? 'Học viên'),
+    avatarUrl:
+      typeof obj.avatarUrl === 'string' && obj.avatarUrl.trim().length > 0
+        ? obj.avatarUrl
+        : null,
+    level,
+    weeklyXp: Math.max(0, Number(obj.weeklyXp ?? 0)),
+    wordsThisWeek: Math.max(0, Number(obj.wordsThisWeek ?? 0)),
+    streakDays: Math.max(0, Number(obj.streakDays ?? 0)),
+    badges: rawBadges,
+    isCurrentUser: Boolean(obj.isCurrentUser),
+    rank: Math.max(1, Number(obj.rank ?? fallbackRank)),
   };
 }

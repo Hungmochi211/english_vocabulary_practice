@@ -10,6 +10,43 @@ import {
   getLast7DaysUtc7,
 } from '../../common/utils/timezone.util';
 
+export interface WeeklyLeaderboardMemberDto {
+  userId: string;
+  fullName: string;
+  avatarUrl: string | null;
+  level: 'A1' | 'A2' | 'B1' | 'B2';
+  weeklyXp: number;
+  wordsThisWeek: number;
+  streakDays: number;
+  badges: string[];
+  isCurrentUser: boolean;
+  rank: number;
+}
+
+export function computeLeaderboardBadges(metrics: {
+  rank: number;
+  weeklyXp: number;
+  wordsThisWeek: number;
+  streakDays: number;
+}): string[] {
+  const badges: string[] = [];
+  if (metrics.rank === 1 && metrics.weeklyXp > 0) {
+    badges.push('Top 1 Tuần');
+  }
+  if (metrics.streakDays >= 21) {
+    badges.push('Bền bỉ 21 ngày');
+  } else if (metrics.streakDays >= 7) {
+    badges.push('Streak 7+ ngày');
+  }
+  if (metrics.wordsThisWeek >= 50) {
+    badges.push('Siêng năng');
+  }
+  if (badges.length === 0) {
+    badges.push(metrics.weeklyXp > 0 || metrics.wordsThisWeek > 0 ? 'Học viên tích cực' : 'Học viên mới');
+  }
+  return badges;
+}
+
 @Injectable()
 export class StreakService implements StreakProgressRecorder, OnModuleInit {
   constructor(
@@ -334,5 +371,121 @@ export class StreakService implements StreakProgressRecorder, OnModuleInit {
       totalVocabularyCount: vocabRow[0]?.totalVocabularyCount ?? 0,
       totalSm2CardsTracked: sm2Row[0]?.totalSm2CardsTracked ?? 0,
     };
+  }
+
+  async getWeeklyLeaderboard(
+    currentUserId: number,
+    limit = 20,
+    now: Date = new Date(),
+  ): Promise<WeeklyLeaderboardMemberDto[]> {
+    const safeLimit = Math.max(1, Math.min(50, Math.floor(limit || 20)));
+    const today = getTodayUtc7Date(now);
+    const yesterday = addDaysUtc7(today, -1);
+    const last7Dates = getLast7DaysUtc7(now);
+    const weekStartDate = last7Dates[0];
+
+    const rows: Array<{
+      userId: number;
+      fullName: string;
+      avatarUrl: string | null;
+      level: string;
+      weeklyXp: number;
+      wordsThisWeek: number;
+      streakDays: number;
+      rank: number;
+    }> = await this.dataSource.query(
+      `
+      WITH weekly_xp AS (
+        SELECT
+          user_id,
+          COALESCE(ROUND(SUM(total_score) * 10), 0)::int AS xp
+        FROM quiz_attempts
+        WHERE status = 'submitted'
+          AND submitted_at IS NOT NULL
+          AND (submitted_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date >= $2::date
+        GROUP BY user_id
+      ),
+      weekly_words AS (
+        SELECT
+          user_id,
+          COALESCE(SUM(words_learned + words_reviewed), 0)::int AS words
+        FROM daily_study_logs
+        WHERE study_date >= $2::date
+        GROUP BY user_id
+      ),
+      ranked AS (
+        SELECT
+          u.id AS "userId",
+          u.full_name AS "fullName",
+          u.avatar_url AS "avatarUrl",
+          u.target_level::text AS level,
+          COALESCE(wx.xp, 0)::int AS "weeklyXp",
+          COALESCE(ww.words, 0)::int AS "wordsThisWeek",
+          CASE
+            WHEN us.last_study_date IS NOT NULL AND us.last_study_date >= $3::date
+              THEN COALESCE(us.current_streak, 0)::int
+            ELSE 0
+          END AS "streakDays",
+          ROW_NUMBER() OVER (
+            ORDER BY
+              COALESCE(wx.xp, 0) DESC,
+              CASE
+                WHEN us.last_study_date IS NOT NULL AND us.last_study_date >= $3::date
+                  THEN COALESCE(us.current_streak, 0)
+                ELSE 0
+              END DESC,
+              COALESCE(ww.words, 0) DESC,
+              u.full_name ASC,
+              u.id ASC
+          )::int AS rank
+        FROM users u
+        LEFT JOIN weekly_xp wx ON wx.user_id = u.id
+        LEFT JOIN weekly_words ww ON ww.user_id = u.id
+        LEFT JOIN user_streaks us ON us.user_id = u.id
+        WHERE u.is_active = TRUE
+          AND (u.role = 'learner' OR u.id = $1)
+      )
+      SELECT
+        "userId",
+        "fullName",
+        "avatarUrl",
+        level,
+        "weeklyXp",
+        "wordsThisWeek",
+        "streakDays",
+        rank
+      FROM ranked
+      WHERE rank <= $4 OR "userId" = $1
+      ORDER BY rank ASC;
+      `,
+      [currentUserId, weekStartDate, yesterday, safeLimit],
+    );
+
+    const validLevels = new Set(['A1', 'A2', 'B1', 'B2']);
+
+    return rows.map((r) => {
+      const weeklyXp = Math.max(0, Number(r.weeklyXp ?? 0));
+      const wordsThisWeek = Math.max(0, Number(r.wordsThisWeek ?? 0));
+      const streakDays = Math.max(0, Number(r.streakDays ?? 0));
+      const rank = Math.max(1, Number(r.rank ?? 1));
+      const level = (validLevels.has(String(r.level)) ? String(r.level) : 'B1') as
+        | 'A1'
+        | 'A2'
+        | 'B1'
+        | 'B2';
+
+      return {
+        userId: String(r.userId),
+        fullName: String(r.fullName || 'Học viên'),
+        avatarUrl: typeof r.avatarUrl === 'string' && r.avatarUrl.trim() ? r.avatarUrl : null,
+        level,
+        weeklyXp,
+        wordsThisWeek,
+        streakDays,
+        badges: computeLeaderboardBadges({ rank, weeklyXp, wordsThisWeek, streakDays }),
+        isCurrentUser: Number(r.userId) === currentUserId,
+        rank,
+      };
+    });
   }
 }

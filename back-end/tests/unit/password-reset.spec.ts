@@ -5,7 +5,10 @@ import Redis from 'ioredis';
 import { AuthService } from '../../src/modules/auth/auth.service';
 import { RateLimiterService } from '../../src/modules/auth/rate-limiter.service';
 import { AuditService } from '../../src/modules/audit/audit.service';
-import { PasswordResetMailService } from '../../src/modules/auth/password-reset-mail.service';
+import {
+  PasswordResetMailService,
+  buildPasswordResetOtpEmail,
+} from '../../src/modules/auth/password-reset-mail.service';
 
 describe('AuthService — OTP Forgot & Reset Password (US6-AS2, FR-016)', () => {
   function buildHarness() {
@@ -183,5 +186,24 @@ describe('AuthService — OTP Forgot & Reset Password (US6-AS2, FR-016)', () => 
     await expect(
       h.service.forgotPassword({ email: 'sv01@vnua.edu.vn' }, '10.0.0.1'),
     ).rejects.toBeInstanceOf(HttpException);
+  });
+
+  it('builds a professional bilingual (VI + EN) HTML and plain-text OTP email with HTML escaping', () => {
+    const mail = buildPasswordResetOtpEmail({
+      fullName: 'Nguyễn <An> & "Bạn"',
+      otp: '482910',
+      expiresMinutes: 10,
+    });
+
+    expect(mail.subject).toContain('482910');
+    expect(mail.subject).toContain('Password Reset Code');
+    expect(mail.text).toContain('[TIẾNG VIỆT]');
+    expect(mail.text).toContain('[ENGLISH]');
+    expect(mail.text).toContain('482910');
+    expect(mail.html).toContain('482910');
+    expect(mail.html).toContain('LexiTag Learning Lab');
+    expect(mail.html).toContain('We received a request to reset the password');
+    expect(mail.html).toContain('Nguyễn &lt;An&gt; &amp; &quot;Bạn&quot;');
+    expect(mail.html).not.toContain('<An>');
   });
 });

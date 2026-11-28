@@ -1,6 +1,7 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { StreakService } from './streak.service';
+import { LeaderboardQueryDto } from './dto/leaderboard-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -19,6 +20,14 @@ export class StatsController {
   @Get('overview')
   async getOverview(@CurrentUser() user: AuthenticatedUser) {
     return this.streakService.getOverviewStats(user.id);
+  }
+
+  @Get('leaderboard')
+  async getWeeklyLeaderboard(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: LeaderboardQueryDto,
+  ) {
+    return this.streakService.getWeeklyLeaderboard(user.id, query.limit ?? 20);
   }
 }
 

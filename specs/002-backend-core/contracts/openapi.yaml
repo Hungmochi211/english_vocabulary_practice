@@ -480,6 +480,30 @@ paths:
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
+  /stats/leaderboard:
+    get:
+      summary: Lấy Bảng xếp hạng tuần (7 ngày gần nhất theo UTC+7) đồng bộ từ dữ liệu thực của người học
+      tags: [Stats]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Số lượng học viên tối đa hiển thị trong bảng xếp hạng (1..50, mặc định 20)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        '200':
+          description: Danh sách học viên xếp hạng giảm dần theo weeklyXp, streakDays, wordsThisWeek (không rò rỉ email/thông tin nhạy cảm; luôn bao gồm người dùng hiện tại kèm thứ hạng thật)
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
   /admin/users:
     get:
       summary: Danh sách học viên phân trang (Chỉ dành cho Admin)

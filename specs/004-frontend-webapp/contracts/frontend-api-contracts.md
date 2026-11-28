@@ -43,6 +43,7 @@ Tài liệu này khóa chặt hợp đồng giao tiếp giữa Frontend (`font-e
 | Lấy từ đến hạn SM-2 hôm nay | `GET /reviews/due` | `['reviews', 'due']` |
 | Bắt đầu phiên ôn SM-2 | `POST /reviews/session/start` | Body `{ limit?: 1..50 }` (mặc định 20) — **chỉ lấy từ đến hạn SM-2 trên máy chủ**, trả `attemptId` + `questions[]` |
 | Thống kê Streak, Leitner & 7 ngày | `GET /stats/overview` | `['stats', 'overview']` |
+| Bảng xếp hạng Tuần (Gamification) | `GET /stats/leaderboard?limit=20` | `['leaderboard', 'weekly']` — đồng bộ dữ liệu thực từ PostgreSQL (`weeklyXp`, `wordsThisWeek`, `streakDays`, `badges`, `rank`, `isCurrentUser`; không trả email) |
 
 #### Quy tắc tách biệt Phiên chính thức vs Phiên luyện tập tự chọn (Sổ từ đã lưu / Ôn lại từ Lịch sử)
 
